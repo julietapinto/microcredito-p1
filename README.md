@@ -9,8 +9,6 @@ Proyecto 1 del curso Análisis de Sistemas II.
 - Integrante 3: Núcleo financiero, pruebas y coordinación.
 - Integrante 4: OpenAPI, ADR, documentación e integración.
 
-# Sistema de Gestión de Microcrédito — SGMC
-
 ## Objetivo
 
 Diseñar e implementar el núcleo financiero de un sistema de microcréditos utilizando UML, arquitectura hexagonal, patrones de diseño, OpenAPI y pruebas automatizadas.
