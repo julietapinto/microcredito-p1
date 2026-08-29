@@ -1,0 +1,47 @@
+{
+  "name": "microcredito-p1",
+  "version": "1.0.0",
+  "description": "Proyecto 1 del curso Análisis de Sistemas II.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate-openapi": "npx tsx scripts/generate-openapi.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/julietapinto/microcredito-p1.git"
+  },
+  "keywords": [
+    "microcredito",
+    "typescript",
+    "ddd",
+    "arquitectura-hexagonal"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/julietapinto/microcredito-p1/issues"
+  },
+  "homepage": "https://github.com/julietapinto/microcredito-p1#readme",
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "date-fns": "^4.4.0",
+    "decimal.js": "^10.6.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "esbuild": "^0.28.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}
