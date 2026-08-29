@@ -1,0 +1,1633 @@
+#   ==========================================
+# TRAZABILIDAD DEL CONTRATO
+#  ==========================================
+# Este contrato OpenAPI fue elaborado en colaboración con el equipo.
+#
+# Recursos incluidos originalmente en el repositorio: https://github.com/julietapinto/sgmc-openapi-contrato.git
+#   - POST /creditos/{creditoId}/pagos (incluye Idempotency-Key)
+#   - GET /cartera-riesgo
+#   - Schemas: Dinero, ProblemDetails, PagoRegistrado, AplicacionDelPago,
+#     CarteraEnRiesgoResponse, TramoCartera, MedioDePago, EstadoCredito,
+#     TramoMora, RegistrarPagoRequest, Paginacion
+#
+# Recursos completados para cubrir todos los requisitos del enunciado:
+#   - Clientes (POST, GET, GET /{id})
+#   - Solicitudes (POST, GET /{id}, POST /{id}/aprobar, POST /{id}/rechazar)
+#   - Créditos (POST, GET /{id}, GET /{id}/plan-amortizacion)
+#   - Pagos (GET /{creditoId}/pagos/historial)
+#   - Cierres (GET /diario, GET /mensual)
+#   - Schemas: Cliente, RegistrarClienteRequest, SolicitudCredito,
+#     CrearSolicitudRequest, Credito, DesembolsarCreditoRequest,
+#     Cuota, PlanAmortizacion, Cierre
+#
+# Fecha de integración: 28/08/2026
+#  ==========================================
+
+openapi: 3.0.3
+info:
+  title: SGMC · API de Crédito Vecino, S. A.
+  version: 1.0.0
+  description: "Contrato del Sistema de Gestión de Microcrédito. Los esquemas se generan desde Zod: el contrato y la validación en ejecución son el mismo artefacto."
+  contact:
+    name: Análisis de Sistemas II (037) — UMG
+  license:
+    name: Uso académico
+
+servers:
+  - url: https://api.creditovecino.gt/v1
+    description: Producción (ficticia)
+  - url: http://localhost:3000/api
+    description: Desarrollo
+
+tags:
+  - name: Clientes
+    description: Gestión de clientes (Originación)
+  - name: Solicitudes
+    description: Gestión de solicitudes de crédito (Originación)
+  - name: Créditos
+    description: Gestión de créditos y desembolsos (Originación / Cartera)
+  - name: Pagos
+    description: Registro y consulta de pagos (Cartera y Cobros)
+  - name: Cierres
+    description: Cierres diarios y mensuales (Cierres)
+  - name: Cartera
+    description: Análisis de cartera y riesgo (Cierres / Reportería)
+
+paths:
+  # CLIENTES
+  
+  /clientes:
+    post:
+      tags:
+        - Clientes
+      operationId: registrarCliente
+      summary: Registrar un nuevo cliente
+      description: Crea un cliente en el sistema. El DPI debe ser único.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrarClienteRequest"
+            example:
+              clienteEjemplo:
+                summary: Cliente de ejemplo
+                value:
+                  nombre: "Lutwing Martinez"
+                  identificacion: "1234-56789-0101"
+                  email: "lutwing.martinez@gmail.com"
+                  telefono: "502-5555-1234"
+                  direccion: "Zona 10, Ciudad de Guatemala"
+      responses:
+        "201":
+          description: Cliente creado exitosamente
+          headers:
+            Location:
+              description: URI del cliente creado
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cliente"
+        "400":
+          description: Error de validación
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "409":
+          description: Cliente ya existe (DPI duplicado)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: Violación de regla de negocio
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+    get:
+      tags:
+        - Clientes
+      operationId: listarClientes
+      summary: Listar clientes
+      description: Obtiene la lista de clientes registrados con paginación
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+          description: Cantidad máxima de resultados
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Cursor opaco para paginación
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Búsqueda por nombre o identificación
+      responses:
+        "200":
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Cliente"
+                  paginacion:
+                    $ref: "#/components/schemas/Paginacion"
+        "400":
+          description: Parámetros inválidos
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /clientes/{clienteId}:
+    get:
+      tags:
+        - Clientes
+      operationId: obtenerCliente
+      summary: Obtener cliente por ID
+      parameters:
+        - name: clienteId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^CLI-\d{3,8}$
+          description: Identificador del cliente
+      responses:
+        "200":
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cliente"
+        "404":
+          description: Cliente no encontrado
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  # SOLICITUDES
+  
+  /solicitudes:
+    post:
+      tags:
+        - Solicitudes
+      operationId: crearSolicitud
+      summary: Crear solicitud de crédito
+      description: Crea una nueva solicitud de crédito. El estado inicial es PENDIENTE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearSolicitudRequest"
+            example:
+              solicitudEjemplo:
+                summary: Solicitud de crédito de ejemplo
+                value:
+                  clienteId: "CLI-001"
+                  montoSolicitado:
+                    valor: "10000.00"
+                    moneda: GTQ
+                  plazoMeses: 12
+      responses:
+        "201":
+          description: Solicitud creada
+          headers:
+            Location:
+              description: URI de la solicitud creada
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudCredito"
+        "400":
+          description: Error de validación
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Cliente no encontrado
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: Violación de regla de negocio
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /solicitudes/{solicitudId}:
+    get:
+      tags:
+        - Solicitudes
+      operationId: obtenerSolicitud
+      summary: Obtener solicitud por ID
+      parameters:
+        - name: solicitudId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^SOL-\d{3,8}$
+          description: Identificador de la solicitud
+      responses:
+        "200":
+          description: Solicitud encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudCredito"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /solicitudes/{solicitudId}/aprobar:
+    post:
+      tags:
+        - Solicitudes
+      operationId: aprobarSolicitud
+      summary: Aprobar una solicitud de crédito
+      description: Cambia el estado de la solicitud a APROBADA. Solo permite aprobar solicitudes en estado PENDIENTE.
+      parameters:
+        - name: solicitudId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^SOL-\d{3,8}$
+          description: Identificador de la solicitud
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tasaInteres:
+                  type: string
+                  description: Tasa nominal anual (TNA) a aplicar
+                  example: "36.0"
+      responses:
+        "200":
+          description: Solicitud aprobada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudCredito"
+        "400":
+          description: La solicitud no puede ser aprobada
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: Violación de regla de negocio
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /solicitudes/{solicitudId}/rechazar:
+    post:
+      tags:
+        - Solicitudes
+      operationId: rechazarSolicitud
+      summary: Rechazar una solicitud de crédito
+      description: Cambia el estado de la solicitud a RECHAZADA. Solo permite rechazar solicitudes en estado PENDIENTE.
+      parameters:
+        - name: solicitudId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^SOL-\d{3,8}$
+          description: Identificador de la solicitud
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motivo:
+                  type: string
+                  example: "No cumple con las políticas de crédito"
+      responses:
+        "200":
+          description: Solicitud rechazada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudCredito"
+        "400":
+          description: La solicitud no puede ser rechazada
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  
+  # CRÉDITOS
+  
+  /creditos:
+    post:
+      tags:
+        - Créditos
+      operationId: desembolsarCredito
+      summary: Desembolsar crédito aprobado
+      description: Realiza el desembolso de una solicitud aprobada. Genera el plan de amortización y el crédito queda en estado VIGENTE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DesembolsarCreditoRequest"
+            example:
+              desembolsoEjemplo:
+                summary: Desembolso de crédito
+                value:
+                  solicitudId: "SOL-001"
+                  fechaDesembolso: "2026-08-28"
+      responses:
+        "201":
+          description: Crédito desembolsado exitosamente
+          headers:
+            Location:
+              description: URI del crédito creado
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credito"
+        "400":
+          description: Error de validación
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: Violación de regla de negocio
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /creditos/{creditoId}:
+    get:
+      tags:
+        - Créditos
+      operationId: obtenerCredito
+      summary: Obtener crédito por ID
+      parameters:
+        - name: creditoId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^C-\d{3,8}$
+          description: Identificador del crédito
+      responses:
+        "200":
+          description: Crédito encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credito"
+        "404":
+          description: Crédito no encontrado
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /creditos/{creditoId}/plan-amortizacion:
+    get:
+      tags:
+        - Créditos
+      operationId: obtenerPlanAmortizacion
+      summary: Obtener plan de amortización del crédito
+      description: Retorna el plan de amortización completo con todas las cuotas calculadas
+      parameters:
+        - name: creditoId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^C-\d{3,8}$
+          description: Identificador del crédito
+      responses:
+        "200":
+          description: Plan de amortización
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanAmortizacion"
+        "404":
+          description: Crédito no encontrado
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  
+  # PAGOS
+  
+  /creditos/{creditoId}/pagos:
+    post:
+      tags:
+        - Pagos
+      operationId: registrarPago
+      summary: Registra un pago sobre un crédito
+      description: "Aplica el pago en el orden de prelación (gastos → interés moratorio → interés corriente → capital) y devuelve el desglose. Operación NO idempotente por método: la idempotencia se obtiene con la cabecera Idempotency-Key."
+      parameters:
+        - name: creditoId
+          in: path
+          required: true
+          description: Identificador del crédito
+          schema:
+            type: string
+            pattern: ^C-\d{3,8}$
+            description: Identificador del crédito
+            example:
+              - C-004
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Clave generada por el cliente. Si se reintenta el mismo pago con la misma clave y el mismo cuerpo, se devuelve la respuesta original (200) sin volver a cobrar.
+          schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+            description: Clave de idempotencia generada por el cliente (UUID v4). Reintentar el mismo pago con la misma clave no debe cobrar dos veces.
+            example:
+              - 5b0b9e2e-6a1f-4a5c-9c1e-0d6d1a1f0b3a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrarPagoRequest"
+            example:
+              pagoExacto:
+                summary: Pago exacto de la cuota 2 vencida (caso de referencia 6.6.3)
+                value:
+                  monto:
+                    valor: "1011.88"
+                    moneda: GTQ
+                  fechaPago: "2026-08-22"
+                  medio: agente_bancario
+                  referencia: "BOL-88213"
+              pagoParcial:
+                summary: Pago de menos (caso de referencia 6.6.4)
+                value:
+                  monto:
+                    valor: "500.00"
+                    moneda: GTQ
+                  fechaPago: "2026-08-22"
+                  medio: efectivo
+              pagoExcedente:
+                summary: Pago de más (caso de referencia 6.6.5)
+                value:
+                  monto:
+                    valor: "3000.00"
+                    moneda: GTQ
+                  fechaPago: "2026-08-22"
+                  medio: transferencia
+                  referencia: "TRF-00321"
+      responses:
+        "200":
+          description: "Reintento con la misma clave y el mismo contenido: se reproduce la respuesta original (reproducido = true). No se cobró de nuevo."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagoRegistrado"
+        "201":
+          description: Pago registrado por primera vez
+          headers:
+            Location:
+              description: URI del pago creado
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagoRegistrado"
+        "404":
+          description: El crédito no existe
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                caso:
+                  summary: El crédito no existe
+                  value:
+                    type: https://api.creditovecino.gt/problemas/credito-no-encontrado
+                    title: El crédito no existe
+                    status: 404
+                    detail: No existe ningún crédito con el identificador 'C-999'.
+                    instance: /creditos/C-999/pagos
+                    traceId: 01J9Z4T900
+        "409":
+          description: "Conflicto: la clave de idempotencia se reutilizó con un contenido distinto, o el estado del crédito no admite pagos (p. ej. 'solicitado')."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                caso:
+                  summary: "Conflicto: la clave de idempotencia se reutilizó con un contenido distinto, o el estado del crédito no admite pagos (p. ej. 'solicitado')."
+                  value:
+                    type: https://api.creditovecino.gt/problemas/clave-idempotencia-reutilizada
+                    title: Clave de idempotencia reutilizada con otro contenido
+                    status: 409
+                    detail: La clave 5b0b9e2e… se usó antes con un monto distinto.
+                    instance: /creditos/C-004/pagos
+                    traceId: 01J9Z4T8Q2
+        "422":
+          description: El cuerpo es sintácticamente válido pero viola una regla del contrato o del dominio
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                caso:
+                  summary: El cuerpo es sintácticamente válido pero viola una regla del contrato o del dominio
+                  value:
+                    type: https://api.creditovecino.gt/problemas/estado-no-admite-pago
+                    title: El crédito no admite pagos en su estado actual
+                    status: 422
+                    detail: "El crédito 'C-010' está en estado 'solicitado': aún no fue desembolsado y no puede recibir pagos."
+                    instance: /creditos/C-010/pagos
+                    traceId: 01J9Z4T9K1
+        "429":
+          description: Demasiadas solicitudes
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                caso:
+                  summary: Demasiadas solicitudes
+                  value:
+                    type: https://api.creditovecino.gt/problemas/limite-excedido
+                    title: Demasiadas solicitudes en poco tiempo
+                    status: 429
+                    detail: Se superó el límite de 60 solicitudes por minuto para este cliente. Reintente tras 'Retry-After'.
+                    instance: /creditos/C-004/pagos
+                    traceId: 01J9Z4T9X7
+        "500":
+          description: Error no previsto del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                caso:
+                  summary: Error no previsto del servidor
+                  value:
+                    type: https://api.creditovecino.gt/problemas/error-servidor
+                    title: Error no previsto del servidor
+                    status: 500
+                    detail: Ocurrió un error inesperado al procesar el pago. Consulte el traceId con soporte.
+                    instance: /creditos/C-004/pagos
+                    traceId: 01J9Z4TA02
+
+  /creditos/{creditoId}/pagos/historial:
+    get:
+      tags:
+        - Pagos
+      operationId: historialPagos
+      summary: Historial de pagos del crédito
+      parameters:
+        - name: creditoId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^C-\d{3,8}$
+          description: Identificador del crédito
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: Historial de pagos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PagoRegistrado"
+                  paginacion:
+                    $ref: "#/components/schemas/Paginacion"
+        "404":
+          description: Crédito no encontrado
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  
+  # CIERRES
+  
+  /cierres/diario:
+    get:
+      tags:
+        - Cierres
+      operationId: cierreDiario
+      summary: Obtener cierre diario
+      description: Retorna el cierre consolidado para una fecha específica
+      parameters:
+        - name: fecha
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Fecha del cierre (YYYY-MM-DD)
+      responses:
+        "200":
+          description: Cierre diario
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cierre"
+        "400":
+          description: Fecha inválida
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: Fecha fuera de rango
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /cierres/mensual:
+    get:
+      tags:
+        - Cierres
+      operationId: cierreMensual
+      summary: Obtener cierre mensual
+      description: Retorna el cierre consolidado para un mes completo. La fecha debe ser el último día del mes.
+      parameters:
+        - name: fecha
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Fecha de corte (debe ser fin de mes, YYYY-MM-DD)
+      responses:
+        "200":
+          description: Cierre mensual
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cierre"
+        "400":
+          description: Fecha inválida
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: Fecha no es fin de mes o fuera de rango
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  
+  # CARTERA EN RIESGO
+  
+  /cartera-riesgo:
+    get:
+      tags:
+        - Cartera
+      operationId: consultarCarteraEnRiesgo
+      summary: Consulta el indicador de cartera en riesgo a una fecha de corte
+      description: "Operación segura e idempotente. Devuelve siempre, junto al porcentaje, lo dado por incobrable en el período: reportar el indicador solo es engañoso."
+      parameters:
+        - name: fechaCorte
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+            description: Fecha calendario en formato AAAA-MM-DD
+            example:
+              - "2026-08-22"
+        - name: incluirReestructurados
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+            description: Indica si deben incluirse los créditos reestructurados en el indicador
+      responses:
+        "200":
+          description: Indicador calculado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CarteraEnRiesgoResponse"
+              example:
+                casoDeReferencia:
+                  summary: Caso de referencia 6.8.1 del Proyecto 1 (7.00 %)
+                  value:
+                    fechaCorte: "2026-08-22"
+                    carteraActiva:
+                      valor: "800000.00"
+                      moneda: GTQ
+                    saldoEnRiesgo:
+                      valor: "56000.00"
+                      moneda: GTQ
+                    porcentajeEnRiesgo: 0.07
+                    dadoPorIncobrableEnElPeriodo:
+                      valor: "15000.00"
+                      moneda: GTQ
+                    porTramo:
+                      - tramo: mora_2
+                        creditos: 1
+                        saldoCapital:
+                          valor: "24000.00"
+                          moneda: GTQ
+                      - tramo: mora_3
+                        creditos: 1
+                        saldoCapital:
+                          valor: "18000.00"
+                          moneda: GTQ
+                      - tramo: vencido
+                        creditos: 1
+                        saldoCapital:
+                          valor: "8000.00"
+                          moneda: GTQ
+        "400":
+          description: Parámetros de consulta inválidos
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                caso:
+                  summary: Parámetros de consulta inválidos
+                  value:
+                    type: https://api.creditovecino.gt/problemas/validacion
+                    title: Parámetros de consulta inválidos
+                    status: 400
+                    detail: El parámetro 'fechaCorte' no cumple el formato AAAA-MM-DD.
+                    instance: /cartera-riesgo
+                    traceId: 01J9Z4TB14
+                    errores:
+                      - campo: fechaCorte
+                        mensaje: "Formato esperado: AAAA-MM-DD, p. ej. '2026-08-22'."
+        "422":
+          description: Fecha de corte fuera del rango permitido
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+              example:
+                caso:
+                  summary: Fecha de corte fuera del rango permitido
+                  value:
+                    type: https://api.creditovecino.gt/problemas/fecha-fuera-de-rango
+                    title: Fecha de corte fuera del rango permitido
+                    status: 422
+                    detail: La fecha de corte no puede ser posterior a la fecha del día ni anterior a la puesta en marcha del Sistema (01/01/2025).
+                    instance: /cartera-riesgo
+                    traceId: 01J9Z4TBZ3
+        "500":
+          description: Error interno del servidor
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+components:
+  schemas:
+    
+    # TIPOS BASE
+    
+    Dinero:
+      type: object
+      properties:
+        valor:
+          type: string
+          pattern: ^-?\d{1,13}\.\d{2}$
+          description: Importe como cadena decimal con 2 decimales exactos
+          example:
+            - "1004.62"
+        moneda:
+          type: string
+          enum:
+           - GTQ
+          description: Código ISO 4217. El Sistema opera únicamente en quetzales.
+          example:
+            - GTQ
+      required:
+        - valor
+        - moneda
+      additionalProperties: false
+      description: Objeto de Valor monetario. La representación en el contrato es de cadena; internamente el núcleo usa decimal.js o centavos enteros.
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI que identifica el TIPO de problema. Es el identificador estable, no el mensaje.
+          example:
+            - https://api.creditovecino.gt/problemas/clave-idempotencia-reutilizada
+        title:
+          type: string
+          example:
+            - Clave de idempotencia reutilizada con otro contenido
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+          example:
+            - 409
+        detail:
+          description: Explicación específica de ESTA ocurrencia. Nunca debe incluir datos sensibles de otro cliente.
+          example:
+            - La clave 5b0b9e2e… se usó antes con un monto distinto.
+          type: string
+        instance:
+          description: URI de la ocurrencia concreta
+          example:
+            - /creditos/C-004/pagos
+          type: string
+        traceId:
+          example:
+            - 01J9Z4T8Q2
+          type: string
+        errores:
+          type: array
+          items:
+            type: object
+            properties:
+              campo:
+                type: string
+                example:
+                  - monto.valor
+              mensaje:
+                type: string
+                example:
+                  - Debe ser decimal de punto fijo con 2 decimales
+            required:
+              - campo
+              - mensaje
+            additionalProperties: false
+      required:
+        - type
+        - title
+        - status
+      additionalProperties: false
+      description: Cuerpo de error uniforme del Sistema, conforme a la RFC 9457 (application/problem+json).
+
+    Paginacion:
+      type: object
+      properties:
+        limite:
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 200
+        cursor:
+          description: Cursor opaco devuelto por la página anterior
+          type: string
+      required:
+        - limite
+      additionalProperties: false
+
+    
+    # CLIENTES
+    
+    Cliente:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^CLI-\d{3,8}$
+          description: Identificador del cliente
+          example:
+            - CLI-001
+        nombre:
+          type: string
+          description: Nombre completo del cliente
+          example:
+            - Lutwing Martinez
+        identificacion:
+          type: string
+          description: DPI o NIT
+          example:
+            - 1234-56789-0101
+        email:
+          type: string
+          format: email
+          description: Correo electrónico
+          example:
+            - lutwing.martinez@gmail.com
+        telefono:
+          type: string
+          description: Número de teléfono
+          example:
+            - 502-5555-1234
+        direccion:
+          type: string
+          description: Dirección física
+          example:
+            - Zona 10, Ciudad de Guatemala
+      required:
+        - id
+        - nombre
+        - identificacion
+      additionalProperties: false
+
+    RegistrarClienteRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          example:
+            - Lutwing Martinez
+        identificacion:
+          type: string
+          minLength: 1
+          example:
+            - 1234-56789-0101
+        email:
+          type: string
+          format: email
+          example:
+            - lutwing.martinez@gmail.com
+        telefono:
+          type: string
+          example:
+            - 502-5555-1234
+        direccion:
+          type: string
+          example:
+            - Zona 10, Ciudad de Guatemala
+      required:
+        - nombre
+        - identificacion
+      additionalProperties: false
+
+    
+    # SOLICITUDES
+    
+    SolicitudCredito:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^SOL-\d{3,8}$
+          description: Identificador de la solicitud
+          example:
+            - SOL-001
+        clienteId:
+          type: string
+          pattern: ^CLI-\d{3,8}$
+          description: ID del cliente
+          example:
+            - CLI-001
+        montoSolicitado:
+          $ref: "#/components/schemas/Dinero"
+        plazoMeses:
+          type: integer
+          minimum: 3
+          maximum: 24
+          example:
+            - 12
+        tasaInteres:
+          type: string
+          description: Tasa nominal anual (TNA) en porcentaje
+          example:
+            - "36.0"
+        estado:
+          type: string
+          enum:
+            - PENDIENTE
+            - APROBADA
+            - RECHAZADA
+          description: Estado de la solicitud
+          example:
+            - PENDIENTE
+        fechaSolicitud:
+          type: string
+          format: date
+          example:
+            - "2026-08-28"
+      required:
+        - id
+        - clienteId
+        - montoSolicitado
+        - plazoMeses
+        - estado
+      additionalProperties: false
+
+    CrearSolicitudRequest:
+      type: object
+      properties:
+        clienteId:
+          type: string
+          pattern: ^CLI-\d{3,8}$
+          example:
+            - CLI-001
+        montoSolicitado:
+          $ref: "#/components/schemas/Dinero"
+        plazoMeses:
+          type: integer
+          minimum: 3
+          maximum: 24
+          example:
+            - 12
+      required:
+        - clienteId
+        - montoSolicitado
+        - plazoMeses
+      additionalProperties: false
+
+    
+    # CRÉDITOS
+    
+    Credito:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^C-\d{3,8}$
+          description: Identificador del crédito
+          example:
+            - C-001
+        solicitudId:
+          type: string
+          pattern: ^SOL-\d{3,8}$
+          description: ID de la solicitud que originó el crédito
+          example:
+            - SOL-001
+        clienteId:
+          type: string
+          pattern: ^CLI-\d{3,8}$
+          description: ID del cliente
+          example:
+            - CLI-001
+        capitalDesembolsado:
+          $ref: "#/components/schemas/Dinero"
+        plazoMeses:
+          type: integer
+          example:
+            - 12
+        tasaMensual:
+          type: string
+          description: Tasa mensual (TNA / 12)
+          example:
+            - "3.0"
+        tasaNominalAnual:
+          type: string
+          description: Tasa nominal anual en porcentaje
+          example:
+            - "36.0"
+        estado:
+          type: string
+          enum:
+            - SOLICITADO
+            - APROBADO
+            - RECHAZADO
+            - ANULADO
+            - VIGENTE
+            - EN_MORA
+            - REESTRUCTURADO
+            - CANCELADO
+            - INCOBRABLE
+          description: Estado del crédito
+          example:
+            - VIGENTE
+        fechaDesembolso:
+          type: string
+          format: date
+          example:
+            - "2026-08-28"
+        saldoCapital:
+          $ref: "#/components/schemas/Dinero"
+        diasAtraso:
+          type: integer
+          minimum: 0
+          description: Días de atraso del crédito
+          example:
+            - 0
+        tramoMora:
+          type: string
+          enum:
+            - SIN_MORA
+            - MORA_1
+            - MORA_2
+            - MORA_3
+            - VENCIDO
+            - INCOBRABLE
+          description: Clasificación derivada de los días de atraso
+          example:
+            - SIN_MORA
+        reestructurado:
+          type: boolean
+          description: Indica si el crédito ha sido reestructurado
+          example:
+            - false
+      required:
+        - id
+        - solicitudId
+        - clienteId
+        - capitalDesembolsado
+        - plazoMeses
+        - tasaMensual
+        - estado
+      additionalProperties: false
+
+    DesembolsarCreditoRequest:
+      type: object
+      properties:
+        solicitudId:
+          type: string
+          pattern: ^SOL-\d{3,8}$
+          example:
+            - SOL-001
+        fechaDesembolso:
+          type: string
+          format: date
+          example:
+            - "2026-08-28"
+      required:
+        - solicitudId
+      additionalProperties: false
+
+    
+    # PLAN DE AMORTIZACIÓN
+    
+    Cuota:
+      type: object
+      properties:
+        numero:
+          type: integer
+          minimum: 1
+          example:
+            - 1
+        saldoInicial:
+          $ref: "#/components/schemas/Dinero"
+        monto:
+          $ref: "#/components/schemas/Dinero"
+        interes:
+          $ref: "#/components/schemas/Dinero"
+        amortizacion:
+          $ref: "#/components/schemas/Dinero"
+        saldoFinal:
+          $ref: "#/components/schemas/Dinero"
+        fechaVencimiento:
+          type: string
+          format: date
+          example:
+            - "2026-09-28"
+      required:
+        - numero
+        - saldoInicial
+        - monto
+        - interes
+        - amortizacion
+        - saldoFinal
+        - fechaVencimiento
+      additionalProperties: false
+
+    PlanAmortizacion:
+      type: object
+      properties:
+        creditoId:
+          type: string
+          pattern: ^C-\d{3,8}$
+          example:
+            - C-001
+        capital:
+          $ref: "#/components/schemas/Dinero"
+        tasaNominalAnual:
+          type: string
+          example:
+            - "36.0"
+        plazoMeses:
+          type: integer
+          example:
+            - 12
+        cuotaMensual:
+          $ref: "#/components/schemas/Dinero"
+        cuotas:
+          type: array
+          items:
+            $ref: "#/components/schemas/Cuota"
+      required:
+        - creditoId
+        - capital
+        - tasaNominalAnual
+        - plazoMeses
+        - cuotaMensual
+        - cuotas
+      additionalProperties: false
+
+    
+    # PAGOS
+    
+    MedioDePago:
+      type: string
+      enum:
+        - efectivo
+        - transferencia
+        - agente_bancario
+      description: Canal por el que se recibió el pago
+
+    RegistrarPagoRequest:
+      type: object
+      properties:
+        monto:
+          $ref: "#/components/schemas/Dinero"
+        fechaPago:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Fecha calendario en formato AAAA-MM-DD
+          example:
+            - "2026-08-22"
+        medio:
+          $ref: "#/components/schemas/MedioDePago"
+        referencia:
+          description: Referencia opcional del comprobante o de la transacción
+          example:
+            - DEP-458921
+          type: string
+          maxLength: 40
+      required:
+        - monto
+        - fechaPago
+        - medio
+      additionalProperties: false
+      description: Datos necesarios para registrar un pago
+
+    AplicacionDelPago:
+      type: object
+      properties:
+        gastos:
+          type: string
+          pattern: ^-?\d{1,13}\.\d{2}$
+          description: Importe como cadena decimal con 2 decimales exactos
+          example:
+            - "0.00"
+        interesMoratorio:
+          type: string
+          pattern: ^-?\d{1,13}\.\d{2}$
+          description: Importe como cadena decimal con 2 decimales exactos
+          example:
+            - "7.26"
+        interesCorriente:
+          type: string
+          pattern: ^-?\d{1,13}\.\d{2}$
+          description: Importe como cadena decimal con 2 decimales exactos
+          example:
+            - "278.86"
+        capital:
+          type: string
+          pattern: ^-?\d{1,13}\.\d{2}$
+          description: Importe como cadena decimal con 2 decimales exactos
+          example:
+            - "725.76"
+        excedente:
+          type: string
+          pattern: ^-?\d{1,13}\.\d{2}$
+          description: Importe como cadena decimal con 2 decimales exactos
+          example:
+            - "0.00"
+      required:
+        - gastos
+        - interesMoratorio
+        - interesCorriente
+        - capital
+        - excedente
+      additionalProperties: false
+      description: "Desglose del pago en el orden de prelación: gastos → moratorio → corriente → capital."
+
+    EstadoCredito:
+      type: string
+      enum:
+        - vigente
+        - en_mora
+        - cancelado
+        - reestructurado
+        - incobrable
+
+    TramoMora:
+      type: string
+      enum:
+        - ninguno
+        - mora_1
+        - mora_2
+        - mora_3
+        - vencido
+      description: Clasificación derivada de los días de atraso
+
+    PagoRegistrado:
+      type: object
+      properties:
+        pagoId:
+          type: string
+          example:
+            - PG-2026-000731
+        creditoId:
+          type: string
+          pattern: ^C-\d{3,8}$
+          description: Identificador del crédito
+          example:
+            - C-004
+        recibidoEn:
+          type: string
+          description: Instante en formato RFC 3339 con zona horaria
+          example:
+            - "2026-08-22T09:15:00-06:00"
+        montoRecibido:
+          $ref: "#/components/schemas/Dinero"
+        aplicacion:
+          $ref: "#/components/schemas/AplicacionDelPago"
+        saldoCapitalDespues:
+          $ref: "#/components/schemas/Dinero"
+        estadoCredito:
+          $ref: "#/components/schemas/EstadoCredito"
+        tramoMora:
+          $ref: "#/components/schemas/TramoMora"
+        diasAtraso:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          description: Días de atraso vigentes después de aplicar el pago
+          example:
+            - 15
+        reproducido:
+          type: boolean
+          description: Indica si se reprodujo el resultado de un pago registrado anteriormente con la misma clave de idempotencia
+          example:
+            - false
+      required:
+        - pagoId
+        - creditoId
+        - recibidoEn
+        - montoRecibido
+        - aplicacion
+        - saldoCapitalDespues
+        - estadoCredito
+        - tramoMora
+        - diasAtraso
+        - reproducido
+      additionalProperties: false
+      description: Resultado del registro de un pago y situación posterior del crédito
+
+    
+    # CARTERA EN RIESGO
+    
+    TramoCartera:
+      type: object
+      properties:
+        tramo:
+          type: string
+          enum:
+            - mora_1
+            - mora_2
+            - mora_3
+            - vencido
+        creditos:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          description: Cantidad de créditos clasificados en el tramo
+          example:
+            - 3
+        saldoCapital:
+          $ref: "#/components/schemas/Dinero"
+      required:
+        - tramo
+        - creditos
+        - saldoCapital
+      additionalProperties: false
+      description: Resumen de créditos y saldo de capital por tramo de mora
+
+    CarteraEnRiesgoResponse:
+      type: object
+      properties:
+        fechaCorte:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Fecha calendario en formato AAAA-MM-DD
+          example:
+            - "2026-08-22"
+        carteraActiva:
+          $ref: "#/components/schemas/Dinero"
+        saldoEnRiesgo:
+          $ref: "#/components/schemas/Dinero"
+        porcentajeEnRiesgo:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Proporción entre el saldo en riesgo y la cartera activa; 0.07 representa 7 %
+          example:
+            - 0.07
+        dadoPorIncobrableEnElPeriodo:
+          $ref: "#/components/schemas/Dinero"
+        porTramo:
+          type: array
+          items:
+            $ref: "#/components/schemas/TramoCartera"
+      required:
+        - fechaCorte
+        - carteraActiva
+        - saldoEnRiesgo
+        - porcentajeEnRiesgo
+        - dadoPorIncobrableEnElPeriodo
+        - porTramo
+      additionalProperties: false
+      description: Indicador de cartera en riesgo acompañado de las bajas por incobrabilidad
+
+    
+    # CIERRES
+    
+    Cierre:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date
+          example:
+            - "2026-08-31"
+        totalDesembolsos:
+          $ref: "#/components/schemas/Dinero"
+        totalRecuperaciones:
+          $ref: "#/components/schemas/Dinero"
+        totalInteresDevengado:
+          $ref: "#/components/schemas/Dinero"
+        totalInteresMoratorio:
+          $ref: "#/components/schemas/Dinero"
+        carteraActiva:
+          $ref: "#/components/schemas/Dinero"
+        carteraEnRiesgo:
+          $ref: "#/components/schemas/Dinero"
+        porcentajeRiesgo:
+          type: string
+          description: Porcentaje de cartera en riesgo como decimal (ej "0.0700")
+          example:
+            - "0.0700"
+        incobrablesPeriodo:
+          $ref: "#/components/schemas/Dinero"
+        creditosActivos:
+          type: integer
+          example:
+            - 6
+        creditosVencidos:
+          type: integer
+          example:
+            - 1
+      required:
+        - fecha
+        - totalDesembolsos
+        - totalRecuperaciones
+        - carteraActiva
+        - carteraEnRiesgo
+        - porcentajeRiesgo
+        - incobrablesPeriodo
+      additionalProperties: false

@@ -13,14 +13,14 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": [
-      "node",
-      "vitest/globals"
-    ]
+    "types": ["node"],  // <--- MODIFICADO: Agregado para reconocer fs, path, etc.
+    "noEmit": true       // <--- MODIFICADO: No genera archivos .js
   },
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "scripts/**/*.ts",              // <--- MODIFICADO: Agregado para incluir scripts/
+    "docs/api/esquemas/**/*.ts"     // <--- MODIFICADO: Agregado para incluir esquemas/
   ]
 }
