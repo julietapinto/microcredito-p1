@@ -12,3 +12,18 @@ Proyecto 1 del curso Análisis de Sistemas II.
 ## Estado
 
 Proyecto en desarrollo.
+
+## Cambios
+
+- Documentación del objetivo y alcance.
+- Resumen de arquitectura hexagonal.
+- Funcionalidades financieras implementadas.
+- Reglas de mora, prelación y cartera en riesgo.
+- Ubicación de OpenAPI, errores y ADR.
+- Instrucciones de instalación, compilación y pruebas.
+- Resumen de entregables E1–E6.
+
+## Validación
+
+- Compilación exitosa.
+- Pruebas automatizadas aprobadas.
