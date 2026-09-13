@@ -1,29 +1,28 @@
-# Sistema de Gestión de Microcrédito — Crédito Vecino, S. A.
+# Sistema de Gestión de Microcrédito
 
-Proyecto 1 del curso Análisis de Sistemas II.
+Proyecto académico del curso Análisis de Sistemas II de la Universidad Mariano Gálvez de Guatemala.
 
-## Integrantes
+El sistema modela las operaciones principales de Crédito Vecino, S. A., incluyendo solicitudes, créditos, planes de amortización, pagos, mora y cartera en riesgo.
 
-- Integrante 1: Análisis del dominio y UML.
-- Integrante 2: Arquitectura y diseño de componentes.
-- Integrante 3: Núcleo financiero, pruebas y coordinación.
-- Integrante 4: OpenAPI, ADR, documentación e integración.
+## Proyecto 1
 
-## Estado
+El Proyecto 1 desarrolla la arquitectura y el núcleo financiero del sistema.
 
-Proyecto en desarrollo.
+Incluye:
 
-## Cambios
+- Arquitectura hexagonal.
+- Diagramas UML.
+- Objeto de valor `Dinero`.
+- Plan de amortización francés.
+- Cálculo y clasificación de mora.
+- Prelación de pagos.
+- Cartera en riesgo.
+- Estados del crédito.
+- Registro idempotente de pagos.
+- Contrato OpenAPI.
+- Pruebas automatizadas.
 
-- Documentación del objetivo y alcance.
-- Resumen de arquitectura hexagonal.
-- Funcionalidades financieras implementadas.
-- Reglas de mora, prelación y cartera en riesgo.
-- Ubicación de OpenAPI, errores y ADR.
-- Instrucciones de instalación, compilación y pruebas.
-- Resumen de entregables E1–E6.
+La versión entregada del Proyecto 1 está identificada con la etiqueta:
 
-## Validación
-
-- Compilación exitosa.
-- Pruebas automatizadas aprobadas.
+```text
+entrega-p1
