@@ -2,6 +2,53 @@ import { describe, expect, it } from "vitest";
 import { Dinero } from "../src/dominio/dinero.js";
 import { PoliticaPlana } from "../src/dominio/politica-mora/politica-plana.js";
 import { PoliticaEscalonada } from "../src/dominio/politica-mora/politica-escalonada.js";
+import { PoliticaRetroactiva } from "../src/dominio/politica-mora/politica-retroactiva.js";
+import { CatalogoPoliticasMora } from "../src/dominio/politica-mora/catalogo-politicas.js";
+
+
+describe("Política retroactiva de prueba", () => {
+  it("aplica la tasa del tramo actual a todos los días", () => {
+    const politica = new PoliticaRetroactiva({
+      codigo: "POL-PRUEBA-RETROACTIVA",
+      baseConteo: 360,
+      tramos: [
+        {
+          nombre: "MORA_1",
+          inicio: 1,
+          fin: 30,
+          tasaNominalAnual: "0.18"
+        },
+        {
+          nombre: "MORA_2",
+          inicio: 31,
+          fin: 60,
+          tasaNominalAnual: "0.24"
+        },
+        {
+          nombre: "MORA_3",
+          inicio: 61,
+          fin: 90,
+          tasaNominalAnual: "0.30"
+        },
+        {
+          nombre: "VENCIDO",
+          inicio: 91,
+          fin: 120,
+          tasaNominalAnual: "0.36"
+        }
+      ]
+    });
+
+    const resultado = politica.calcular(
+      Dinero.desde("725.76"),
+      100
+    );
+
+    expect(
+      resultado.interesMoratorio.comoTexto()
+    ).toBe("72.58");
+  });
+});
 
 function crearPoliticaEscalonada(): PoliticaEscalonada {
   return new PoliticaEscalonada({
@@ -186,5 +233,89 @@ describe("Política de mora plana", () => {
         -1
       )
     ).toThrow();
+  });
+});
+describe("Catálogo de políticas de mora", () => {
+  it("mantiene la política plana para créditos anteriores", () => {
+    const plana = crearPoliticaPlana();
+    const escalonada = crearPoliticaEscalonada();
+
+    const catalogo = new CatalogoPoliticasMora([
+      {
+        vigenteDesde: "2024-01-01",
+        politica: plana
+      },
+      {
+        vigenteDesde: "2026-10-01",
+        politica: escalonada
+      }
+    ]);
+
+    const politica = catalogo.resolver(
+      "2026-08-15"
+    );
+
+    const resultado = politica.calcular(
+      Dinero.desde("725.76"),
+      45
+    );
+
+    expect(politica.codigo).toBe("POL-2024-01");
+
+    expect(
+      resultado.interesMoratorio.comoTexto()
+    ).toBe("21.77");
+  });
+
+  it("usa la política escalonada para créditos nuevos", () => {
+    const plana = crearPoliticaPlana();
+    const escalonada = crearPoliticaEscalonada();
+
+    const catalogo = new CatalogoPoliticasMora([
+      {
+        vigenteDesde: "2024-01-01",
+        politica: plana
+      },
+      {
+        vigenteDesde: "2026-10-01",
+        politica: escalonada
+      }
+    ]);
+
+    const politica = catalogo.resolver(
+      "2026-10-10"
+    );
+
+    const resultado = politica.calcular(
+      Dinero.desde("725.76"),
+      45
+    );
+
+    expect(politica.codigo).toBe("POL-2026-10");
+
+    expect(
+      resultado.interesMoratorio.comoTexto()
+    ).toBe("18.14");
+  });
+
+  it("rechaza fechas con formato o calendario inválido", () => {
+    const catalogo = new CatalogoPoliticasMora([
+      {
+        vigenteDesde: "2024-01-01",
+        politica: crearPoliticaPlana()
+      }
+    ]);
+
+    expect(() =>
+      catalogo.resolver("10/10/2026")
+    ).toThrow(
+      "La fecha debe utilizar el formato YYYY-MM-DD"
+    );
+
+    expect(() =>
+      catalogo.resolver("2026-02-30")
+    ).toThrow(
+      "La fecha proporcionada no es válida"
+    );
   });
 });
