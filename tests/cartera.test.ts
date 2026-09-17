@@ -4,6 +4,7 @@ import {
   type CreditoCartera
 } from "../src/dominio/cartera.js";
 import { Dinero } from "../src/dominio/dinero.js";
+import { Decimal } from "decimal.js";
 
 function crearCredito(
   id: string,
@@ -130,3 +131,64 @@ describe("Cartera en riesgo", () => {
     ).toThrow();
   });
 });
+
+  it("desglosa el 7.00% de cartera en riesgo por tramo", () => {
+    const resultado = calcularCarteraRiesgo(
+      carteraReferencia
+    );
+
+    expect(
+      resultado.desglosePorTramo.map(
+        (tramo) => ({
+          tramo: tramo.tramo,
+          saldo: tramo.saldoCapital.comoTexto(),
+          porcentaje: tramo.porcentaje,
+          creditos: tramo.creditos
+        })
+      )
+    ).toEqual([
+      {
+        tramo: "MORA_1",
+        saldo: "0.00",
+        porcentaje: "0.0000",
+        creditos: []
+      },
+      {
+        tramo: "MORA_2",
+        saldo: "24000.00",
+        porcentaje: "0.0300",
+        creditos: ["C-003"]
+      },
+      {
+        tramo: "MORA_3",
+        saldo: "18000.00",
+        porcentaje: "0.0225",
+        creditos: ["C-004"]
+      },
+      {
+        tramo: "VENCIDO",
+        saldo: "8000.00",
+        porcentaje: "0.0100",
+        creditos: ["C-005"]
+      },
+      {
+        tramo: "REESTRUCTURADO_AL_DIA",
+        saldo: "6000.00",
+        porcentaje: "0.0075",
+        creditos: ["C-006"]
+      }
+    ]);
+
+    const sumaPorcentajes =
+      resultado.desglosePorTramo.reduce(
+        (total, tramo) =>
+          total.plus(tramo.porcentaje),
+        new Decimal(0)
+      );
+
+    expect(sumaPorcentajes.toFixed(4)).toBe(
+      resultado.porcentaje
+    );
+
+    expect(resultado.porcentaje).toBe("0.0700");
+  });

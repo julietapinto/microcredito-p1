@@ -2,6 +2,39 @@ import { describe, expect, it } from "vitest";
 import { Credito } from "../src/dominio/estados-credito.js";
 
 describe("Ciclo de vida del crédito", () => {
+    it("cancela un crédito en mora al liquidar todo el saldo", () => {
+    const credito = new Credito(
+      "C-001",
+      "EN_MORA",
+      45
+    );
+
+    credito.registrarPago(0, true);
+
+    expect(credito.obtenerSituacion()).toEqual({
+      estado: "CANCELADO",
+      diasAtraso: 0,
+      tramo: "SIN_MORA"
+    });
+  });
+
+  it("rechaza cancelar si quedan cuotas vencidas", () => {
+    const credito = new Credito(
+      "C-001",
+      "EN_MORA",
+      45
+    );
+
+    expect(() =>
+      credito.registrarPago(10, true)
+    ).toThrow(
+      "No se puede cancelar un crédito con cuotas vencidas pendientes"
+    );
+
+    expect(
+      credito.obtenerSituacion().estado
+    ).toBe("EN_MORA");
+  });
   it("baja de Mora 2 a Mora 1", () => {
     const credito = new Credito(
       "C-001",
