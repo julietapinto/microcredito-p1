@@ -1,6 +1,6 @@
-## E4. Decisión de arquitectura móvil/web y diseño responsivo
+# E4. Decisión de arquitectura móvil/web y diseño responsivo
 
-### E4.1 Decisión fundamentada entre nativa, híbrida o PWA
+## E4.1 Decisión fundamentada entre nativa, híbrida o PWA
 
 Para la solución propuesta se utilizará una **Progressive Web App (PWA)** como tecnología de acceso para las operaciones realizadas desde dispositivos móviles, manteniendo el acceso mediante navegador web para el personal de gerencia.
 
@@ -16,89 +16,117 @@ Por estas razones, se utilizará una **PWA con diseño responsive y enfoque mobi
 
 ---
 
-### E4.2 Estrategia responsiva mobile-first
+## E4.2 Estrategia responsiva mobile-first
 
-El diseño de la interfaz seguirá un enfoque **mobile-first**, tomando como referencia las condiciones de trabajo del asesor de campo. La interfaz deberá priorizar la facilidad de interacción desde una pantalla pequeña, utilizando controles adecuados para interacción táctil, navegación sencilla y una cantidad limitada de información visible simultáneamente.
+La solución utiliza una estrategia **mobile-first** para los perfiles que utilizan dispositivos móviles y una distribución de mayor densidad para los perfiles que utilizan escritorio.
 
-Para la **interfaz de gerencia en escritorio**, se aprovechará el espacio disponible para presentar una mayor cantidad de información simultáneamente. Los indicadores, tablas y demás elementos de consulta podrán distribuirse horizontalmente, permitiendo una mayor densidad de información.
+El prototipo diferencia explícitamente ambos contextos: móvil para asesor y cliente, y escritorio para comité y gerencia.
 
-En la **pantalla móvil**, el tablero deberá reorganizarse de manera que la información más importante permanezca visible y accesible, mientras que la información secundaria podrá trasladarse a vistas de detalle o componentes desplegables.
+### Transformación del tablero gerencial
 
-De forma general, se plantea la siguiente transformación:
+El tablero gerencial tiene como jerarquía principal:
 
-| Elemento               | Escritorio                                  | Dispositivo móvil                                   |
-| ---------------------- | ------------------------------------------- | --------------------------------------------------- |
-| Indicadores            | Varios indicadores visibles simultáneamente | Indicadores organizados verticalmente y priorizados |
-| Tablas                 | Mayor cantidad de columnas visibles         | Conversión a tarjetas, listas o vistas de detalle   |
-| Navegación             | Mayor cantidad de opciones visibles         | Navegación simplificada y priorizada                |
-| Información secundaria | Puede mostrarse simultáneamente             | Se traslada a vistas o secciones secundarias        |
-| Gráficos               | Mayor espacio disponible para visualización | Se priorizan los gráficos principales               |
-| Acciones               | Mayor cantidad de acciones visibles         | Se priorizan las acciones principales               |
+1. **Cartera activa**, que representa el tamaño total administrado.
+2. **Cartera en mora**, que representa el atraso general, considerando créditos con al menos un día de atraso.
+3. **Cartera en riesgo**, que representa créditos con más de 30 días de atraso o reestructurados.
+4. **Desglose por tramo**, que permite analizar y navegar hacia el detalle de los créditos.
+5. **Incobrables del período**, presentado de manera independiente para no mezclarlo con la cartera activa o la cartera en riesgo.
 
-En pantallas pequeñas se sacrificará principalmente la **densidad de información**, procurando mantener disponibles las funcionalidades esenciales. La información secundaria podrá consultarse mediante vistas de detalle sin ocupar espacio permanente en el tablero principal.
+La versión de escritorio aprovecha el espacio disponible para presentar esta información con mayor densidad. La versión móvil conserva la misma jerarquía, pero reorganiza los elementos verticalmente y desplaza la información secundaria a vistas de detalle cuando sea necesario.
 
-**[PENDIENTE]** La distribución definitiva de los componentes del tablero gerencial, así como los elementos específicos que serán ocultados, reorganizados o trasladados a vistas secundarias, se determinará durante el desarrollo del prototipo de interfaz.
+| Elemento                     | Escritorio                                                                | Móvil                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Cartera activa               | Indicador principal visible en el tablero.                                | Tarjeta prioritaria visible en la pantalla principal.                                                             |
+| Cartera en mora              | Indicador independiente: **Q174,000.00 — 21.75 %**.                       | Se mantiene como indicador independiente y visible.                                                               |
+| Cartera en riesgo            | Indicador independiente: **Q56,000.00 — 7.00 %**.                         | Se mantiene como indicador independiente y visible, sin mezclarse visualmente con la cartera en mora.             |
+| Desglose por tramos          | Los tramos se muestran para permitir el análisis y acceso al detalle.     | Los tramos se presentan de forma vertical y el detalle se consulta en una vista secundaria.                       |
+| Detalle de cartera           | Se accede mediante *drill-down* desde el tramo seleccionado.              | Se abre una vista secundaria correspondiente al tramo seleccionado.                                               |
+| Incobrables                  | Se muestran aparte como **“Dado por incobrable en el período”**.          | Se mantienen como información independiente y pueden pasar a una sección secundaria para reducir la carga visual. |
+| Asistente del Proyecto Final | Se conserva el espacio reservado para el asistente conversacional futuro. | Se conserva como componente accesible dentro de la experiencia móvil, de acuerdo con la adaptación del prototipo. |
+
+La distinción entre **cartera en mora** y **cartera en riesgo** es obligatoria para evitar interpretarlas como conceptos equivalentes. El prototipo establece que la cartera en mora corresponde a créditos con al menos un día de atraso, mientras que la cartera en riesgo corresponde a créditos con más de 30 días de atraso o reestructurados.
+
+El tablero utiliza los valores corregidos definidos en E3:
+
+| Indicador         |       Monto | Porcentaje |
+| ----------------- | ----------: | ---------: |
+| Cartera activa    | Q800,000.00 |          — |
+| Cartera en mora   | Q174,000.00 |    21.75 % |
+| Cartera en riesgo |  Q56,000.00 |     7.00 % |
+
+El desglose de cartera en riesgo queda conformado por:
+
+| Tramo          |      Monto | Porcentaje |
+| -------------- | ---------: | ---------: |
+| Mora 2         | Q24,000.00 |     3.00 % |
+| Mora 3         | Q18,000.00 |     2.25 % |
+| Vencido        |  Q8,000.00 |     1.00 % |
+| Reestructurado |  Q6,000.00 |     0.75 % |
+
+El prototipo establece además que **Mora 1 no forma parte de la cartera en riesgo**, y que los incobrables se muestran separadamente. También reserva un espacio para el asistente conversacional futuro.
+
+En pantallas pequeñas se sacrifica principalmente la **densidad de información simultánea**, no la información funcional. Los datos secundarios pueden consultarse mediante vistas adicionales, manteniendo en la pantalla principal los indicadores prioritarios.
 
 ---
 
-### E4.3 Estrategia ante pérdida de conexión
+## E4.3 Estrategia ante pérdida de conexión
 
-Debido a que el asesor puede encontrarse en zonas con conectividad intermitente, la aplicación deberá contemplar la posibilidad de registrar un pago aun cuando temporalmente no exista conexión con el servidor.
+Debido a que el asesor puede registrar un pago en una zona sin conexión, la solución debe permitir almacenar temporalmente la operación y sincronizarla posteriormente.
 
-Cuando el asesor intente registrar un pago, la aplicación verificará la disponibilidad de conexión. Si existe conexión, el pago se enviará normalmente al sistema para su procesamiento.
+El mecanismo propuesto es el siguiente:
 
-Si no existe conexión, el pago se almacenará temporalmente en el dispositivo como una **operación pendiente de sincronización**. La información necesaria para realizar posteriormente el registro deberá conservarse junto con la clave de idempotencia correspondiente.
+1. El asesor registra el pago desde la pantalla **Registro de pago**.
+2. Si existe conexión, la operación se envía normalmente al sistema.
+3. Si no existe conexión, la operación se almacena localmente en **IndexedDB**.
+4. La operación queda identificada como pendiente de sincronización y conserva todos los datos necesarios para su procesamiento posterior.
+5. El **Service Worker** permite mantener el funcionamiento de la aplicación durante la pérdida de conectividad y gestionar el proceso de sincronización al recuperar la conexión.
+6. Al recuperar la conexión, el sistema realiza un **reintento automático**.
+7. El usuario también puede consultar las operaciones pendientes y ejecutar un **reintento manual** cuando sea necesario.
 
-Cuando el dispositivo recupere la conexión, las operaciones pendientes serán enviadas nuevamente al servidor.
+### Estados de la operación
 
-Esta estrategia se relaciona directamente con la **clave de idempotencia implementada en el Proyecto 1**. El caso de uso `RegistrarPago` recibe una `claveIdempotencia` y consulta el repositorio para determinar si previamente se registró un pago con dicha clave. Si el pago ya existe, se valida que corresponda al mismo crédito y monto y se devuelve el registro existente en lugar de crear un segundo pago.
+Las operaciones de pago utilizarán los siguientes estados:
 
-Por lo tanto, si un pago almacenado localmente se envía nuevamente debido a un reintento de sincronización, la clave de idempotencia permitirá que el sistema identifique la operación como una repetición del mismo pago y evite registrarlo nuevamente.
+* **Pendiente:** el pago fue almacenado localmente y todavía no ha sido confirmado por el servidor.
+* **Sincronizando:** el sistema está intentando enviar la operación.
+* **Registrado:** el servidor confirmó correctamente el pago.
+* **Error:** el intento de sincronización no pudo completarse y la operación puede volver a intentarse.
 
-El flujo propuesto es:
+El prototipo de E3 ya contempla que el comprobante de pago muestre el **estado aplicado o pendiente de sincronización**, así como la protección contra duplicados mediante idempotencia.
 
-```text
-Asesor registra pago
-        │
-        ▼
-¿Existe conexión?
-   ┌────┴────┐
-   │         │
-  Sí        No
-   │         │
-   ▼         ▼
-Enviar     Guardar
-a API      localmente
-   │        como pendiente
-   │         │
-   │    Recuperación de
-   │       conexión
-   │         │
-   └────┬────┘
-        ▼
-Enviar pago pendiente
-        │
-        ▼
-Validar clave de idempotencia
-        │
-   ┌────┴─────┐
-   │          │
-Existe      No existe
-   │          │
-   ▼          ▼
-No duplicar  Registrar
-el pago      el pago
-```
+### Consulta y reintento de pagos pendientes
 
-Esta estrategia también deberá conservar la información temporal utilizada para el cálculo de mora. En el Proyecto 1, las funciones relacionadas con el cálculo de mora reciben una **fecha de corte** como parámetro, en lugar de depender directamente de la fecha actual del sistema.
+El usuario podrá consultar las operaciones que se encuentren en estado **Pendiente** o **Error** mediante el componente de operaciones pendientes asociado al flujo de registro de pagos.
 
-Por esta razón, si el asesor registra un pago sin conexión y posteriormente recupera la conectividad, la fecha de sincronización no deberá sustituir automáticamente la fecha de corte utilizada originalmente.
+Para cada operación se deberá identificar como mínimo el crédito, monto, fecha de corte y estado. Cuando corresponda, se proporcionará una acción **Reintentar**.
 
-Por ejemplo, si un pago fue registrado con una fecha de corte determinada y el dispositivo recupera la conexión al día siguiente, la sincronización deberá conservar la fecha de corte asociada a la operación. Esto permite mantener el cálculo financiero correspondiente al momento en que se realizó la operación, independientemente del momento en que esta sea enviada al servidor.
+El reintento no crea una nueva operación. Se vuelve a procesar la misma operación almacenada localmente.
 
-De esta manera, la estrategia ante pérdida de conexión se fundamenta en dos elementos existentes en el Proyecto 1:
+### Conservación de la clave de idempotencia
 
-* **Clave de idempotencia:** permite realizar reintentos de sincronización sin generar registros duplicados.
-* **Fecha de corte parametrizada:** permite conservar el contexto temporal utilizado para los cálculos de mora y evitar depender automáticamente de la fecha del dispositivo.
+Cada pago registrado sin conexión tendrá una **clave de idempotencia** que se conservará durante todos los intentos de sincronización.
 
-**[PENDIENTE]** Queda por definir el mecanismo concreto de almacenamiento local, la forma en que la PWA detectará la recuperación de conexión y la interfaz mediante la cual el asesor podrá consultar el estado de las operaciones pendientes de sincronización.
+Si un primer intento llega a procesarse en el servidor pero la respuesta no llega correctamente al dispositivo, un nuevo intento utilizará la **misma clave de idempotencia**. El servidor podrá reconocer que corresponde a la misma operación y evitar registrar nuevamente el pago.
+
+Por lo tanto:
+
+**Un pago pendiente conserva la misma clave de idempotencia durante todos sus reintentos.**
+
+Esto evita que una pérdida de conexión, un error de comunicación o un reintento manual produzcan un doble registro del pago.
+
+### Conservación de la fecha de corte
+
+La **fecha de corte** utilizada para el cálculo de la mora también se conserva durante todos los reintentos.
+
+Por ejemplo, si el asesor registra un pago sin conexión utilizando una fecha de corte determinada y el dispositivo recupera la conexión al día siguiente, la operación no debe cambiar automáticamente su fecha de corte por la fecha de sincronización.
+
+Cada reintento conserva:
+
+* la misma clave de idempotencia;
+* el mismo identificador del pago;
+* el mismo monto;
+* la misma fecha de corte.
+
+La fecha de corte se mantiene como un parámetro de la operación y no se sustituye por un valor implícito de “hoy”. De esta forma, la sincronización únicamente modifica el estado de la operación hasta obtener la confirmación del servidor.
+
+El prototipo también muestra en el comprobante la **fecha de corte**, el estado de la operación y la protección anti-duplicados mediante idempotencia, manteniendo estos elementos visibles dentro del flujo de pago.
