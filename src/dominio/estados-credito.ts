@@ -214,16 +214,27 @@ export class Credito {
     diasAtrasoRestantes: number,
     saldoEsCero = false
   ): void {
+    validarDias(diasAtrasoRestantes);
+
+    if (
+      saldoEsCero &&
+      diasAtrasoRestantes !== 0
+    ) {
+      throw new Error(
+        "No se puede cancelar un crédito con cuotas vencidas pendientes"
+      );
+    }
+
     this.estadoActual =
       this.estadoActual.registrarPago(
         diasAtrasoRestantes,
         saldoEsCero
       );
 
-    this.diasAtrasoActuales = saldoEsCero
-      ? 0
-      : diasAtrasoRestantes;
-  }
+  this.diasAtrasoActuales = saldoEsCero
+    ? 0
+    : diasAtrasoRestantes;
+}
 
   actualizarPorCorte(diasAtraso: number): void {
     this.estadoActual =

@@ -1,5 +1,8 @@
 import { Decimal } from "decimal.js";
-import { Dinero, type Moneda } from "./dinero.js";
+import {
+  Dinero,
+  type Moneda
+} from "./dinero.js";
 
 export interface CreditoCartera {
   readonly id: string;
@@ -9,12 +12,36 @@ export interface CreditoCartera {
   readonly incobrable: boolean;
 }
 
+export type TramoCarteraRiesgo =
+  | "MORA_1"
+  | "MORA_2"
+  | "MORA_3"
+  | "VENCIDO"
+  | "REESTRUCTURADO_AL_DIA";
+
+export interface DesgloseCarteraRiesgo {
+  readonly tramo: TramoCarteraRiesgo;
+  readonly saldoCapital: Dinero;
+  readonly porcentaje: string;
+  readonly creditos: readonly string[];
+}
+
 export interface ResultadoCarteraRiesgo {
   readonly carteraActiva: Dinero;
   readonly capitalEnRiesgo: Dinero;
   readonly porcentaje: string;
   readonly creditosEnRiesgo: readonly string[];
+  readonly desglosePorTramo:
+    readonly DesgloseCarteraRiesgo[];
 }
+
+const TRAMOS: readonly TramoCarteraRiesgo[] = [
+  "MORA_1",
+  "MORA_2",
+  "MORA_3",
+  "VENCIDO",
+  "REESTRUCTURADO_AL_DIA"
+];
 
 export function calcularCarteraRiesgo(
   creditos: readonly CreditoCartera[]
@@ -26,6 +53,25 @@ export function calcularCarteraRiesgo(
   let capitalEnRiesgo = Dinero.cero(moneda);
 
   const creditosEnRiesgo: string[] = [];
+
+  const saldosPorTramo:
+    Record<TramoCarteraRiesgo, Dinero> = {
+      MORA_1: Dinero.cero(moneda),
+      MORA_2: Dinero.cero(moneda),
+      MORA_3: Dinero.cero(moneda),
+      VENCIDO: Dinero.cero(moneda),
+      REESTRUCTURADO_AL_DIA:
+        Dinero.cero(moneda)
+    };
+
+  const creditosPorTramo:
+    Record<TramoCarteraRiesgo, string[]> = {
+      MORA_1: [],
+      MORA_2: [],
+      MORA_3: [],
+      VENCIDO: [],
+      REESTRUCTURADO_AL_DIA: []
+    };
 
   for (const credito of creditos) {
     validarCredito(credito, moneda);
@@ -39,24 +85,99 @@ export function calcularCarteraRiesgo(
       credito.saldoCapital
     );
 
-    const estaEnRiesgo =
-      credito.diasAtraso > 30 ||
-      credito.reestructurado;
+    const tramo = obtenerTramoRiesgo(credito);
 
-    if (estaEnRiesgo) {
+    if (tramo !== undefined) {
       capitalEnRiesgo = capitalEnRiesgo.sumar(
         credito.saldoCapital
       );
 
       creditosEnRiesgo.push(credito.id);
+
+      saldosPorTramo[tramo] =
+        saldosPorTramo[tramo].sumar(
+          credito.saldoCapital
+        );
+
+      creditosPorTramo[tramo].push(
+        credito.id
+      );
     }
   }
 
-  const porcentaje = carteraActiva.esCero()
+  const porcentaje = calcularPorcentaje(
+    capitalEnRiesgo,
+    carteraActiva
+  );
+
+  const desglosePorTramo =
+    TRAMOS.map(
+      (tramo): DesgloseCarteraRiesgo => ({
+        tramo,
+        saldoCapital: saldosPorTramo[tramo],
+        porcentaje: calcularPorcentaje(
+          saldosPorTramo[tramo],
+          carteraActiva
+        ),
+        creditos: [
+          ...creditosPorTramo[tramo]
+        ]
+      })
+    );
+
+  return {
+    carteraActiva,
+    capitalEnRiesgo,
+    porcentaje,
+    creditosEnRiesgo,
+    desglosePorTramo
+  };
+}
+
+function obtenerTramoRiesgo(
+  credito: CreditoCartera
+): TramoCarteraRiesgo | undefined {
+  if (
+    credito.reestructurado &&
+    credito.diasAtraso <= 30
+  ) {
+    return "REESTRUCTURADO_AL_DIA";
+  }
+
+  if (
+    credito.diasAtraso >= 31 &&
+    credito.diasAtraso <= 60
+  ) {
+    return "MORA_2";
+  }
+
+  if (
+    credito.diasAtraso >= 61 &&
+    credito.diasAtraso <= 90
+  ) {
+    return "MORA_3";
+  }
+
+  if (
+    credito.diasAtraso >= 91 &&
+    credito.diasAtraso <= 120
+  ) {
+    return "VENCIDO";
+  }
+
+  // Mora 1 ordinaria no forma parte de cartera en riesgo.
+  return undefined;
+}
+
+function calcularPorcentaje(
+  parte: Dinero,
+  total: Dinero
+): string {
+  const porcentaje = total.esCero()
     ? new Decimal(0)
-    : capitalEnRiesgo
+    : parte
         .comoDecimal()
-        .div(carteraActiva.comoDecimal());
+        .div(total.comoDecimal());
 
   if (
     porcentaje.lessThan(0) ||
@@ -67,14 +188,12 @@ export function calcularCarteraRiesgo(
     );
   }
 
-  return {
-    carteraActiva,
-    capitalEnRiesgo,
-    porcentaje: porcentaje
-      .toDecimalPlaces(4, Decimal.ROUND_HALF_UP)
-      .toFixed(4),
-    creditosEnRiesgo
-  };
+  return porcentaje
+    .toDecimalPlaces(
+      4,
+      Decimal.ROUND_HALF_UP
+    )
+    .toFixed(4);
 }
 
 function validarCredito(
