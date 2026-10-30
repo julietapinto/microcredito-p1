@@ -136,30 +136,7 @@ export interface AplicacionPagoMcp {
   readonly capital: DineroMcp;
 }
 
-export interface PagoRegistradoMcp {
-  readonly idPago: string;
-  readonly idCredito: string;
-  readonly fechaCorte: string;
-  readonly monto: DineroMcp;
-  readonly claveIdempotencia: string;
-  readonly reutilizado: boolean;
-  readonly aplicacion: AplicacionPagoMcp;
-  readonly estadoCredito: EstadoCreditoMcp;
-}
-export interface SolicitudRegistroPagoMcp {
-  readonly idCredito: string;
-  readonly monto: DineroMcp;
-  readonly fechaCorte: string;
-  readonly claveIdempotencia: string;
-  readonly aprobadoPorHumano: true;
-}
 
-export interface AplicacionPagoMcp {
-  readonly gastos: DineroMcp;
-  readonly interesMoratorio: DineroMcp;
-  readonly interesCorriente: DineroMcp;
-  readonly capital: DineroMcp;
-}
 
 export interface PagoRegistradoMcp {
   readonly idPago: string;
