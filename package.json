@@ -8,7 +8,10 @@
     "build": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate-openapi": "npx tsx scripts/generate-openapi.ts"
+    "generate-openapi": "npx tsx scripts/generate-openapi.ts",
+    "rag:ingest": "tsx scripts/rag-ingest.ts",
+    "rag:query": "tsx scripts/rag-query.ts",
+    "chat": "tsx scripts/chat-cli.ts"
   },
   "engines": {
     "node": ">=20"
@@ -31,13 +34,17 @@
   "homepage": "https://github.com/julietapinto/microcredito-p1#readme",
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "@langchain/core": "^1.3.1",
+    "@langchain/ollama": "^1.3.0",
     "date-fns": "^4.4.0",
     "decimal.js": "^10.6.0",
+    "dotenv": "^18.0.9",
+    "langchain": "^1.6.0",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.6.5",
     "esbuild": "^0.28.2",
     "tsup": "^8.5.1",
     "tsx": "^4.23.12",
