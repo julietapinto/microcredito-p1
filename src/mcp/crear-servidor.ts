@@ -366,6 +366,262 @@ servidor.registerTool(
     }
   }
 );
+const entradaConsultaCartera = z.object({
+  fechaCorte: z.iso.date({
+    error: "La fecha de corte debe usar el formato YYYY-MM-DD"
+  })
+});
+servidor.registerTool(
+  "consultar_cartera",
+  {
+    title: "Consultar cartera",
+    description:
+      "Devuelve cartera activa, en mora, en riesgo, desglose por tramo e incobrable del período.",
+    inputSchema: entradaConsultaCartera,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  async ({ fechaCorte }) => {
+    try {
+      if (!puerto.consultarCartera) {
+        throw new Error(
+          "La consulta de cartera todavía no está configurada"
+        );
+      }
+
+      const resultado =
+        await puerto.consultarCartera(fechaCorte);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(resultado, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      const mensaje =
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error inesperado";
+
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              codigo: "ERROR_CONSULTA_CARTERA",
+              mensaje
+            })
+          }
+        ]
+      };
+    }
+  }
+);
+const entradaConsultaCierre = z.object({
+  tipo: z.enum([
+    "DIARIO",
+    "MENSUAL"
+  ]),
+
+  fechaCorte: z.iso.date({
+    error: "La fecha de corte debe usar el formato YYYY-MM-DD"
+  })
+});
+
+servidor.registerTool(
+  "consultar_cierre",
+  {
+    title: "Consultar cierre",
+    description:
+      "Consulta desembolsos y recuperaciones por concepto para un cierre diario o mensual.",
+    inputSchema: entradaConsultaCierre,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  async ({ tipo, fechaCorte }) => {
+    try {
+      if (!puerto.consultarCierre) {
+        throw new Error(
+          "La consulta de cierres todavía no está configurada"
+        );
+      }
+
+      const resultado =
+        await puerto.consultarCierre(
+          tipo,
+          fechaCorte
+        );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(resultado, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      const mensaje =
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error inesperado";
+
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              codigo: "ERROR_CONSULTA_CIERRE",
+              mensaje
+            })
+          }
+        ]
+      };
+    }
+  }
+);
+const entradaRegistroPago = z.object({
+  idCredito: z
+    .string()
+    .trim()
+    .min(1, "El identificador del crédito es obligatorio"),
+
+  monto: z
+    .string()
+    .regex(
+      /^\d+\.\d{2}$/,
+      "El monto debe tener exactamente dos decimales"
+    )
+    .refine(
+      (valor) => Number(valor) > 0,
+      "El monto debe ser mayor que cero"
+    ),
+
+  moneda: z.literal("GTQ"),
+
+  fechaCorte: z.iso.date({
+    error: "La fecha de corte debe usar el formato YYYY-MM-DD"
+  }),
+
+  claveIdempotencia: z
+    .string()
+    .trim()
+    .min(8, "La clave de idempotencia es obligatoria"),
+
+  aprobacionHumana: z.boolean().default(false)
+});
+servidor.registerTool(
+  "registrar_pago",
+  {
+    title: "Registrar pago",
+    description:
+      "Propone o registra un pago aplicando prelación e idempotencia. Solo ejecuta con aprobación humana explícita.",
+    inputSchema: entradaRegistroPago,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  async ({
+    idCredito,
+    monto,
+    moneda,
+    fechaCorte,
+    claveIdempotencia,
+    aprobacionHumana
+  }) => {
+    try {
+      if (!aprobacionHumana) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  estado: "PENDIENTE_APROBACION",
+                  ejecutado: false,
+                  requiereAprobacion: true,
+                  mensaje:
+                    "El pago no fue registrado. Se requiere confirmación humana.",
+                  propuesta: {
+                    idCredito,
+                    monto: {
+                      monto,
+                      moneda
+                    },
+                    fechaCorte,
+                    claveIdempotencia
+                  }
+                },
+                null,
+                2
+              )
+            }
+          ]
+        };
+      }
+
+      if (!puerto.registrarPago) {
+        throw new Error(
+          "El registro de pagos todavía no está configurado"
+        );
+      }
+
+      const resultado = await puerto.registrarPago({
+        idCredito,
+        monto: {
+          monto,
+          moneda
+        },
+        fechaCorte,
+        claveIdempotencia,
+        aprobadoPorHumano: true
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(resultado, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      const mensaje =
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error inesperado";
+
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              codigo: "ERROR_REGISTRO_PAGO",
+              mensaje
+            })
+          }
+        ]
+      };
+    }
+  }
+);
 
   return servidor;
 }

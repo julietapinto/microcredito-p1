@@ -67,6 +67,7 @@ describe("Servidor MCP", () => {
 
     try {
       const herramientas = await cliente.listTools();
+      
 
       expect(
         herramientas.tools.map(
@@ -106,4 +107,188 @@ describe("Servidor MCP", () => {
       await servidor.close();
     }
   });
+  it("no registra un pago sin aprobación humana", async () => {
+  let llamadasRegistro = 0;
+
+  const puerto: Partial<PuertoAsistente> = {
+    async registrarPago(solicitud) {
+      llamadasRegistro++;
+
+      return {
+        idPago: "PAGO-001",
+        idCredito: solicitud.idCredito,
+        fechaCorte: solicitud.fechaCorte,
+        monto: solicitud.monto,
+        claveIdempotencia:
+          solicitud.claveIdempotencia,
+        reutilizado: false,
+        aplicacion: {
+          gastos: {
+            monto: "0.00",
+            moneda: "GTQ"
+          },
+          interesMoratorio: {
+            monto: "0.00",
+            moneda: "GTQ"
+          },
+          interesCorriente: {
+            monto: "0.00",
+            moneda: "GTQ"
+          },
+          capital: solicitud.monto
+        },
+        estadoCredito: "VIGENTE"
+      };
+    }
+  };
+
+  const servidor = crearServidorMcp(puerto);
+
+  const cliente = new Client({
+    name: "cliente-pruebas",
+    version: "1.0.0"
+  });
+
+  const [
+    transporteCliente,
+    transporteServidor
+  ] = InMemoryTransport.createLinkedPair();
+
+  await Promise.all([
+    cliente.connect(transporteCliente),
+    servidor.connect(transporteServidor)
+  ]);
+
+  try {
+    const respuesta = await cliente.callTool({
+      name: "registrar_pago",
+      arguments: {
+        idCredito: "CV-2026-0043",
+        monto: "350.00",
+        moneda: "GTQ",
+        fechaCorte: "2026-10-31",
+        claveIdempotencia: "PAGO-001",
+        aprobacionHumana: false
+      }
+    });
+
+    const contenido = respuesta.content[0];
+
+    if (contenido?.type !== "text") {
+      throw new Error(
+        "La herramienta no devolvió contenido de texto"
+      );
+    }
+
+    const resultado = JSON.parse(contenido.text);
+
+    expect(resultado).toMatchObject({
+      estado: "PENDIENTE_APROBACION",
+      ejecutado: false,
+      requiereAprobacion: true
+    });
+
+    expect(llamadasRegistro).toBe(0);
+    expect(respuesta.isError).not.toBe(true);
+  } finally {
+    await cliente.close();
+    await servidor.close();
+  }
+});
+it("registra el pago cuando existe aprobación humana", async () => {
+  let llamadasRegistro = 0;
+  let aprobacionRecibida = false;
+
+  const puerto: Partial<PuertoAsistente> = {
+    async registrarPago(solicitud) {
+      llamadasRegistro++;
+      aprobacionRecibida =
+        solicitud.aprobadoPorHumano;
+
+      return {
+        idPago: "PAGO-001",
+        idCredito: solicitud.idCredito,
+        fechaCorte: solicitud.fechaCorte,
+        monto: solicitud.monto,
+        claveIdempotencia:
+          solicitud.claveIdempotencia,
+        reutilizado: false,
+        aplicacion: {
+          gastos: {
+            monto: "25.00",
+            moneda: "GTQ"
+          },
+          interesMoratorio: {
+            monto: "10.00",
+            moneda: "GTQ"
+          },
+          interesCorriente: {
+            monto: "15.00",
+            moneda: "GTQ"
+          },
+          capital: {
+            monto: "300.00",
+            moneda: "GTQ"
+          }
+        },
+        estadoCredito: "VIGENTE"
+      };
+    }
+  };
+
+  const servidor = crearServidorMcp(puerto);
+
+  const cliente = new Client({
+    name: "cliente-pruebas",
+    version: "1.0.0"
+  });
+
+  const [
+    transporteCliente,
+    transporteServidor
+  ] = InMemoryTransport.createLinkedPair();
+
+  await Promise.all([
+    cliente.connect(transporteCliente),
+    servidor.connect(transporteServidor)
+  ]);
+
+  try {
+    const respuesta = await cliente.callTool({
+      name: "registrar_pago",
+      arguments: {
+        idCredito: "CV-2026-0043",
+        monto: "350.00",
+        moneda: "GTQ",
+        fechaCorte: "2026-10-31",
+        claveIdempotencia: "PAGO-001",
+        aprobacionHumana: true
+      }
+    });
+
+    const contenido = respuesta.content[0];
+
+    if (contenido?.type !== "text") {
+      throw new Error(
+        "La herramienta no devolvió contenido de texto"
+      );
+    }
+
+    const resultado = JSON.parse(contenido.text);
+
+    expect(resultado).toMatchObject({
+      idPago: "PAGO-001",
+      idCredito: "CV-2026-0043",
+      reutilizado: false,
+      estadoCredito: "VIGENTE"
+    });
+
+    expect(llamadasRegistro).toBe(1);
+    expect(aprobacionRecibida).toBe(true);
+    expect(respuesta.isError).not.toBe(true);
+  } finally {
+    await cliente.close();
+    await servidor.close();
+  }
+});
 });

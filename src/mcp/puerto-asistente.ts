@@ -86,7 +86,91 @@ export interface ProximosVencimientosMcp {
   readonly montoTotal: DineroMcp;
   readonly cuotas: readonly CuotaProximaMcp[];
 }
+export interface CarteraPorTramoMcp {
+  readonly tramo: TramoMora;
+  readonly cantidadCreditos: number;
+  readonly capital: DineroMcp;
+}
 
+export interface ConsultaCarteraMcp {
+  readonly fechaCorte: string;
+  readonly carteraActiva: DineroMcp;
+  readonly carteraEnMora: DineroMcp;
+  readonly carteraEnRiesgo: DineroMcp;
+  readonly porcentajeEnRiesgo: string;
+  readonly desglosePorTramo: readonly CarteraPorTramoMcp[];
+  readonly incobrableDelPeriodo: DineroMcp;
+}
+export type TipoCierreMcp =
+  | "DIARIO"
+  | "MENSUAL";
+
+export interface RecuperacionesMcp {
+  readonly gastos: DineroMcp;
+  readonly interesMoratorio: DineroMcp;
+  readonly interesCorriente: DineroMcp;
+  readonly capital: DineroMcp;
+  readonly total: DineroMcp;
+}
+
+export interface ConsultaCierreMcp {
+  readonly tipo: TipoCierreMcp;
+  readonly fechaCorte: string;
+  readonly periodoDesde: string;
+  readonly periodoHasta: string;
+  readonly desembolsos: DineroMcp;
+  readonly recuperaciones: RecuperacionesMcp;
+}
+export interface SolicitudRegistroPagoMcp {
+  readonly idCredito: string;
+  readonly monto: DineroMcp;
+  readonly fechaCorte: string;
+  readonly claveIdempotencia: string;
+  readonly aprobadoPorHumano: true;
+}
+
+export interface AplicacionPagoMcp {
+  readonly gastos: DineroMcp;
+  readonly interesMoratorio: DineroMcp;
+  readonly interesCorriente: DineroMcp;
+  readonly capital: DineroMcp;
+}
+
+export interface PagoRegistradoMcp {
+  readonly idPago: string;
+  readonly idCredito: string;
+  readonly fechaCorte: string;
+  readonly monto: DineroMcp;
+  readonly claveIdempotencia: string;
+  readonly reutilizado: boolean;
+  readonly aplicacion: AplicacionPagoMcp;
+  readonly estadoCredito: EstadoCreditoMcp;
+}
+export interface SolicitudRegistroPagoMcp {
+  readonly idCredito: string;
+  readonly monto: DineroMcp;
+  readonly fechaCorte: string;
+  readonly claveIdempotencia: string;
+  readonly aprobadoPorHumano: true;
+}
+
+export interface AplicacionPagoMcp {
+  readonly gastos: DineroMcp;
+  readonly interesMoratorio: DineroMcp;
+  readonly interesCorriente: DineroMcp;
+  readonly capital: DineroMcp;
+}
+
+export interface PagoRegistradoMcp {
+  readonly idPago: string;
+  readonly idCredito: string;
+  readonly fechaCorte: string;
+  readonly monto: DineroMcp;
+  readonly claveIdempotencia: string;
+  readonly reutilizado: boolean;
+  readonly aplicacion: AplicacionPagoMcp;
+  readonly estadoCredito: EstadoCreditoMcp;
+}
 export interface PuertoAsistente {
   consultarCredito(
     idCredito: string,
@@ -113,4 +197,20 @@ export interface PuertoAsistente {
     fechaCorte: string,
     tramo?: TramoMora
   ): Promise<ListadoCreditosMoraMcp>;
+  
+    consultarCartera(
+    fechaCorte: string
+  ): Promise<ConsultaCarteraMcp>;
+
+    consultarCierre(
+    tipo: TipoCierreMcp,
+    fechaCorte: string
+  ): Promise<ConsultaCierreMcp>;
+  
+    registrarPago(
+    solicitud: SolicitudRegistroPagoMcp
+  ): Promise<PagoRegistradoMcp>;
+
+  
+  
 }
