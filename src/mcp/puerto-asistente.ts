@@ -2,6 +2,11 @@ import type {
   TramoMora
 } from "../dominio/calculadora-mora.js";
 
+
+import type {
+  TramoCarteraRiesgo
+} from "../dominio/cartera.js";
+
 export type EstadoCreditoMcp =
   | "SOLICITADO"
   | "APROBADO"
@@ -45,8 +50,9 @@ export interface DeudaCuotaMcp {
   readonly capital: DineroMcp;
   readonly totalExigible: DineroMcp;
 }
+
 export interface TramoMoraMcp {
-  readonly tramo: TramoMora;
+  readonly tramo: string;
   readonly dias: number;
   readonly tasaNominalAnual: string;
   readonly interesGenerado: DineroMcp;
@@ -87,11 +93,10 @@ export interface ProximosVencimientosMcp {
   readonly cuotas: readonly CuotaProximaMcp[];
 }
 export interface CarteraPorTramoMcp {
-  readonly tramo: TramoMora;
+  readonly tramo: TramoCarteraRiesgo;
   readonly cantidadCreditos: number;
   readonly capital: DineroMcp;
 }
-
 export interface ConsultaCarteraMcp {
   readonly fechaCorte: string;
   readonly carteraActiva: DineroMcp;
