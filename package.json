@@ -8,7 +8,9 @@
     "build": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate-openapi": "npx tsx scripts/generate-openapi.ts"
+    "generate-openapi": "npx tsx scripts/generate-openapi.ts",
+    "db:migrate": "tsx scripts/migrar-db.ts",
+    "db:seed": "tsx src/persistencia/cargar-canonico.ts"
   },
   "engines": {
     "node": ">=20"
@@ -33,11 +35,13 @@
     "@asteasolutions/zod-to-openapi": "^9.1.0",
     "date-fns": "^4.4.0",
     "decimal.js": "^10.6.0",
+    "pg": "^8.23.1",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
+    "@types/pg": "^8.23.1",
     "esbuild": "^0.28.2",
     "tsup": "^8.5.1",
     "tsx": "^4.23.12",
