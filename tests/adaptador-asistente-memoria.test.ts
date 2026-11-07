@@ -308,4 +308,83 @@ it("consulta el resumen de cartera en una fecha de corte", async () => {
       }
     });
   });
+    it("registra un pago aplicando la prelación", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    const resultado =
+      await adaptador.registrarPago({
+        idCredito: "CV-2026-0043",
+        monto: {
+          monto: "1228.75",
+          moneda: "GTQ"
+        },
+        fechaCorte: "2026-10-31",
+        claveIdempotencia:
+          "pago-cuota-0043",
+        aprobadoPorHumano: true
+      });
+
+    expect(resultado).toMatchObject({
+      idPago: "PAGO-0001",
+      idCredito: "CV-2026-0043",
+      reutilizado: false,
+      estadoCredito: "VIGENTE",
+      aplicacion: {
+        gastos: {
+          monto: "25.00",
+          moneda: "GTQ"
+        },
+        interesMoratorio: {
+          monto: "28.75",
+          moneda: "GTQ"
+        },
+        interesCorriente: {
+          monto: "25.00",
+          moneda: "GTQ"
+        },
+        capital: {
+          monto: "1150.00",
+          moneda: "GTQ"
+        }
+      }
+    });
+  });
+
+  it("no duplica un pago con la misma clave", async () => {
+    const datos = crearDatosDemostracion();
+
+    const adaptador =
+      new AdaptadorAsistenteMemoria(datos);
+
+    const solicitud = {
+      idCredito: "CV-2026-0043",
+      monto: {
+        monto: "1228.75",
+        moneda: "GTQ"
+      },
+      fechaCorte: "2026-10-31",
+      claveIdempotencia:
+        "pago-idempotente-0043",
+      aprobadoPorHumano: true as const
+    };
+
+    await adaptador.registrarPago(solicitud);
+
+    const segundoResultado =
+      await adaptador.registrarPago(solicitud);
+
+    expect(
+      segundoResultado.reutilizado
+    ).toBe(true);
+
+    expect(
+      datos.movimientos.filter(
+        (movimiento) =>
+          movimiento.tipo === "PAGO"
+      )
+    ).toHaveLength(1);
+  });
 });

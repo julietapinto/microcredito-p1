@@ -16,6 +16,18 @@ import {
 } from "../dominio/dinero.js";
 
 import {
+  aplicarPrelacion
+} from "../dominio/prelacion-pago.js";
+
+import {
+  RegistrarPago
+} from "../aplicacion/casos-uso/registrar-pago.js";
+
+import {
+  RepositorioPagosMemoria
+} from "../infraestructura/memoria/repositorio-pagos-memoria.js";
+
+import {
   CatalogoPoliticasMora
 } from "../dominio/politica-mora/catalogo-politicas.js";
 
@@ -50,6 +62,8 @@ import {
 import type {
   ConsultaCarteraMcp,
   ConsultaCierreMcp,
+  PagoRegistradoMcp,
+  SolicitudRegistroPagoMcp,
   TipoCierreMcp
 } from "./puerto-asistente.js";
 
@@ -62,15 +76,25 @@ type ConsultasIniciales = Pick<
   | "verProximosVencimientos"
   | "consultarCartera"
   | "consultarCierre"
+  | "registrarPago"
 >;
 
 export class AdaptadorAsistenteMemoria
   implements ConsultasIniciales {
   private readonly catalogoPoliticas =
     crearCatalogoPoliticas();
+  private readonly repositorioPagos =
+    new RepositorioPagosMemoria();
+
+  private readonly casoRegistrarPago =
+    new RegistrarPago(this.repositorioPagos);
+
+  private readonly resultadosPagos =
+    new Map<string, PagoRegistradoMcp>();
 
   constructor(
     private readonly datos: DatosAsistenteMemoria
+    
   ) {}
 
   async consultarCredito(
@@ -552,7 +576,189 @@ async consultarCartera(
       }
     };
   }
-  
+  async registrarPago(
+    solicitud: SolicitudRegistroPagoMcp
+  ): Promise<PagoRegistradoMcp> {
+    validarFecha(solicitud.fechaCorte);
+
+    if (solicitud.aprobadoPorHumano !== true) {
+      throw new Error(
+        "El pago requiere aprobación humana"
+      );
+    }
+
+    if (solicitud.monto.moneda !== "GTQ") {
+      throw new Error(
+        "El adaptador solamente admite pagos en GTQ"
+      );
+    }
+
+    const monto = Dinero.desde(
+      solicitud.monto.monto,
+      "GTQ"
+    );
+
+    const resultadoExistente =
+      this.resultadosPagos.get(
+        solicitud.claveIdempotencia
+      );
+
+    if (resultadoExistente) {
+      this.casoRegistrarPago.ejecutar({
+        idPago: resultadoExistente.idPago,
+        idCredito: solicitud.idCredito,
+        claveIdempotencia:
+          solicitud.claveIdempotencia,
+        monto
+      });
+
+      return {
+        ...resultadoExistente,
+        reutilizado: true
+      };
+    }
+
+    const credito = this.buscarCredito(
+      solicitud.idCredito
+    );
+
+    const cuota = [...credito.cuotas]
+      .filter((actual) => !actual.pagada)
+      .sort(
+        (a, b) =>
+          a.fechaVencimiento.localeCompare(
+            b.fechaVencimiento
+          )
+      )[0];
+
+    if (!cuota) {
+      throw new Error(
+        "El crédito no tiene cuotas pendientes"
+      );
+    }
+
+    const deudaCalculada =
+      await this.calcularDeudaCuota(
+        credito.idCredito,
+        cuota.numero,
+        solicitud.fechaCorte
+      );
+
+    const deuda = {
+      gastos: Dinero.desde(
+        deudaCalculada.gastos.monto
+      ),
+      interesMoratorio: Dinero.desde(
+        deudaCalculada.interesMoratorio.monto
+      ),
+      interesCorriente: Dinero.desde(
+        deudaCalculada.interesCorriente.monto
+      ),
+      capital: Dinero.desde(
+        deudaCalculada.capital.monto
+      )
+    };
+
+    const aplicacion = aplicarPrelacion(
+      monto,
+      deuda
+    );
+
+    if (!aplicacion.excedente.esCero()) {
+      throw new Error(
+        "El monto del pago supera la deuda exigible"
+      );
+    }
+
+    const idPago =
+      `PAGO-${String(
+        this.repositorioPagos.cantidad() + 1
+      ).padStart(4, "0")}`;
+
+    this.casoRegistrarPago.ejecutar({
+      idPago,
+      idCredito: solicitud.idCredito,
+      claveIdempotencia:
+        solicitud.claveIdempotencia,
+      monto
+    });
+
+    credito.saldoCapital =
+      credito.saldoCapital.restar(
+        aplicacion.capital
+      );
+
+    const totalDeuda = deuda.gastos
+      .sumar(deuda.interesMoratorio)
+      .sumar(deuda.interesCorriente)
+      .sumar(deuda.capital);
+
+    if (totalDeuda.menorOIgualQue(monto)) {
+      cuota.pagada = true;
+    }
+
+    const continuaEnMora =
+      credito.cuotas.some(
+        (actual) =>
+          !actual.pagada &&
+          calcularDiasAtraso(
+            actual.fechaVencimiento,
+            solicitud.fechaCorte
+          ) > 0
+      );
+
+    if (credito.saldoCapital.esCero()) {
+      credito.estado = "CANCELADO";
+    } else {
+      credito.estado = continuaEnMora
+        ? "EN_MORA"
+        : "VIGENTE";
+    }
+
+    this.datos.movimientos.push({
+      tipo: "PAGO",
+      fecha: solicitud.fechaCorte,
+      monto,
+      gastos: aplicacion.gastos,
+      interesMoratorio:
+        aplicacion.interesMoratorio,
+      interesCorriente:
+        aplicacion.interesCorriente,
+      capital: aplicacion.capital
+    });
+
+    const resultado: PagoRegistradoMcp = {
+      idPago,
+      idCredito: solicitud.idCredito,
+      fechaCorte: solicitud.fechaCorte,
+      monto: convertirDinero(monto),
+      claveIdempotencia:
+        solicitud.claveIdempotencia,
+      reutilizado: false,
+      aplicacion: {
+        gastos:
+          convertirDinero(aplicacion.gastos),
+        interesMoratorio:
+          convertirDinero(
+            aplicacion.interesMoratorio
+          ),
+        interesCorriente:
+          convertirDinero(
+            aplicacion.interesCorriente
+          ),
+        capital:
+          convertirDinero(aplicacion.capital)
+      },
+      estadoCredito: credito.estado
+    };
+
+    this.resultadosPagos.set(
+      solicitud.claveIdempotencia,
+      resultado
+    );
+
+    return resultado;
+  }
   private buscarCredito(
     idCredito: string
   ): CreditoMemoria {
