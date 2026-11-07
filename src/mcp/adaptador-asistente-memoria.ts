@@ -48,7 +48,9 @@ import {
 } from "../dominio/cartera.js";
 
 import type {
-  ConsultaCarteraMcp
+  ConsultaCarteraMcp,
+  ConsultaCierreMcp,
+  TipoCierreMcp
 } from "./puerto-asistente.js";
 
 type ConsultasIniciales = Pick<
@@ -58,6 +60,8 @@ type ConsultasIniciales = Pick<
   | "explicarMora"
   | "listarCreditosEnMora"
   | "verProximosVencimientos"
+  | "consultarCartera"
+  | "consultarCierre"
 >;
 
 export class AdaptadorAsistenteMemoria
@@ -463,6 +467,92 @@ async consultarCartera(
       convertirDinero(incobrableDelPeriodo)
   };
 }
+  async consultarCierre(
+    tipo: TipoCierreMcp,
+    fechaCorte: string
+  ): Promise<ConsultaCierreMcp> {
+    validarFecha(fechaCorte);
+
+    const periodoDesde =
+      tipo === "DIARIO"
+        ? fechaCorte
+        : `${fechaCorte.slice(0, 7)}-01`;
+
+    const movimientos =
+      this.datos.movimientos.filter(
+        (movimiento) =>
+          movimiento.fecha >= periodoDesde &&
+          movimiento.fecha <= fechaCorte
+      );
+
+    const desembolsos = movimientos
+      .filter(
+        (movimiento) =>
+          movimiento.tipo === "DESEMBOLSO"
+      )
+      .reduce(
+        (total, movimiento) =>
+          total.sumar(movimiento.monto),
+        Dinero.cero("GTQ")
+      );
+
+    const pagos = movimientos.filter(
+      (movimiento) =>
+        movimiento.tipo === "PAGO"
+    );
+
+    const sumarConcepto = (
+      seleccionar: (
+        movimiento: (typeof pagos)[number]
+      ) => Dinero
+    ): Dinero =>
+      pagos.reduce(
+        (total, movimiento) =>
+          total.sumar(seleccionar(movimiento)),
+        Dinero.cero("GTQ")
+      );
+
+    const gastos = sumarConcepto(
+      (movimiento) => movimiento.gastos
+    );
+
+    const interesMoratorio = sumarConcepto(
+      (movimiento) =>
+        movimiento.interesMoratorio
+    );
+
+    const interesCorriente = sumarConcepto(
+      (movimiento) =>
+        movimiento.interesCorriente
+    );
+
+    const capital = sumarConcepto(
+      (movimiento) => movimiento.capital
+    );
+
+    const total = gastos
+      .sumar(interesMoratorio)
+      .sumar(interesCorriente)
+      .sumar(capital);
+
+    return {
+      tipo,
+      fechaCorte,
+      periodoDesde,
+      periodoHasta: fechaCorte,
+      desembolsos: convertirDinero(desembolsos),
+      recuperaciones: {
+        gastos: convertirDinero(gastos),
+        interesMoratorio:
+          convertirDinero(interesMoratorio),
+        interesCorriente:
+          convertirDinero(interesCorriente),
+        capital: convertirDinero(capital),
+        total: convertirDinero(total)
+      }
+    };
+  }
+  
   private buscarCredito(
     idCredito: string
   ): CreditoMemoria {

@@ -279,4 +279,33 @@ it("consulta el resumen de cartera en una fecha de corte", async () => {
     }
   });
 });
+  it("consulta el cierre mensual", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    const resultado =
+      await adaptador.consultarCierre(
+        "MENSUAL",
+        "2026-10-31"
+      );
+
+    expect(resultado).toMatchObject({
+      tipo: "MENSUAL",
+      fechaCorte: "2026-10-31",
+      periodoDesde: "2026-10-01",
+      periodoHasta: "2026-10-31",
+      desembolsos: {
+        monto: "2500.00",
+        moneda: "GTQ"
+      },
+      recuperaciones: {
+        total: {
+          monto: "0.00",
+          moneda: "GTQ"
+        }
+      }
+    });
+  });
 });
