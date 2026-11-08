@@ -7,7 +7,7 @@ import {
 import {
   AdaptadorAsistenteMemoria
 } from "../src/mcp/adaptador-asistente-memoria.js";
-  
+
 import {
   crearDatosDemostracion
 } from "../src/mcp/datos-asistente-memoria.js";
@@ -230,9 +230,9 @@ it("explica la mora por tramos recorridos", async () => {
       monto: "28.75",
       moneda: "GTQ"
     }
-    
+
   });
-  
+
 });
 it("consulta el resumen de cartera en una fecha de corte", async () => {
   const adaptador =

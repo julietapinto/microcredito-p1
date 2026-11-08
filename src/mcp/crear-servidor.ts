@@ -224,7 +224,7 @@ export function crearServidorMcp(
   esquemaExplicacionMora.parse(resultado),
   null,
   2
-) 
+)
           }
         ]
       };
@@ -321,7 +321,7 @@ servidor.registerTool(
           }
         ]
       };
-      
+
     }
   }
 );

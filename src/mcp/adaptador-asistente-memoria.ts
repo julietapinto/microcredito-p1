@@ -94,7 +94,7 @@ export class AdaptadorAsistenteMemoria
 
   constructor(
     private readonly datos: DatosAsistenteMemoria
-    
+
   ) {}
 
   async consultarCredito(
@@ -868,7 +868,7 @@ CatalogoPoliticasMora {
         ]
       })
     }
-    
-    
+
+
   ]);
 }
