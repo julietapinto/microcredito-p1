@@ -1,5 +1,4 @@
-
-import type { Pool } from "pg";
+﻿import type { Pool } from "pg";
 import { Dinero } from "../../dominio/dinero.js";
 import type {
   PagoRegistrado,
@@ -11,54 +10,42 @@ interface FilaPago {
   id_credito: string;
   clave_idempotencia: string;
   monto_centavos: string;
+  fecha: string;
+  canal: string;
+  origen: string;
 }
 
 export class ConflictoIdempotenciaError extends Error {
   constructor() {
-    super(
-      "La clave de idempotencia ya fue utilizada con otros datos"
-    );
+    super("La clave de idempotencia ya fue utilizada con otros datos");
     this.name = "ConflictoIdempotenciaError";
   }
 }
 
-export class RepositorioPagosPostgres
-  implements RepositorioPagos {
-
+export class RepositorioPagosPostgres implements RepositorioPagos {
   constructor(private readonly pool: Pool) {}
 
-  buscarPorClave(
-    _claveIdempotencia: string
-  ): PagoRegistrado | undefined {
-    throw new Error(
-      "Este repositorio requiere operaciones asíncronas."
-    );
+  buscarPorClave(_claveIdempotencia: string): PagoRegistrado | undefined {
+    throw new Error("Este repositorio requiere operaciones asíncronas.");
   }
 
   guardar(_pago: PagoRegistrado): void {
-    throw new Error(
-      "Este repositorio requiere operaciones asíncronas."
-    );
+    throw new Error("Este repositorio requiere operaciones asíncronas.");
   }
 
   async buscarPorClaveAsync(
     claveIdempotencia: string
   ): Promise<PagoRegistrado | undefined> {
     const resultado = await this.pool.query<FilaPago>(
-      `SELECT
-         id_pago::text,
-         id_credito,
-         clave_idempotencia,
-         monto_centavos::text
+      `SELECT id_pago::text, id_credito, clave_idempotencia,
+              monto_centavos::text, fecha::text, canal, origen
        FROM pagos
-       WHERE clave_idempotencia = $1
-         AND origen = 'API'`,
+       WHERE clave_idempotencia = $1`,
       [claveIdempotencia]
     );
 
     const fila = resultado.rows[0];
-
-    return fila ? this.convertirFila(fila) : undefined;
+    return fila?.origen === "API" ? this.convertirFila(fila) : undefined;
   }
 
   async guardarAsync(
@@ -73,71 +60,58 @@ export class RepositorioPagosPostgres
 
     const resultado = await this.pool.query<FilaPago>(
       `INSERT INTO pagos (
-         clave_idempotencia,
-         id_credito,
-         fecha,
-         monto_centavos,
-         canal,
-         origen
+         clave_idempotencia, id_credito, fecha,
+         monto_centavos, canal, origen
        )
        VALUES ($1, $2, $3, $4, $5, 'API')
-       ON CONFLICT (clave_idempotencia)
-       DO NOTHING
-       RETURNING
-         id_pago::text,
-         id_credito,
-         clave_idempotencia,
-         monto_centavos::text`,
-      [
-        pago.claveIdempotencia,
-        pago.idCredito,
-        fecha,
-        montoCentavos,
-        canal
-      ]
+       ON CONFLICT (clave_idempotencia) DO NOTHING
+       RETURNING id_pago::text, id_credito, clave_idempotencia,
+                 monto_centavos::text, fecha::text, canal, origen`,
+      [pago.claveIdempotencia, pago.idCredito, fecha, montoCentavos, canal]
     );
 
-    const filaInsertada = resultado.rows[0];
+    const insertado = resultado.rows[0];
+    if (insertado) return this.convertirFila(insertado);
 
-    if (filaInsertada) {
-      return this.convertirFila(filaInsertada);
-    }
-
-    const existente = await this.buscarPorClaveAsync(
-      pago.claveIdempotencia
+    const consulta = await this.pool.query<FilaPago>(
+      `SELECT id_pago::text, id_credito, clave_idempotencia,
+              monto_centavos::text, fecha::text, canal, origen
+       FROM pagos
+       WHERE clave_idempotencia = $1
+       FOR UPDATE`,
+      [pago.claveIdempotencia]
     );
+
+    const existente = consulta.rows[0];
 
     if (!existente) {
-      throw new Error(
-        "No fue posible recuperar el pago existente."
-      );
+      throw new Error("No fue posible recuperar el pago existente.");
     }
 
-    const mismoCredito =
-      existente.idCredito === pago.idCredito;
-
-    const mismoMonto =
-      existente.monto.esIgualA(pago.monto);
-
-    if (!mismoCredito || !mismoMonto) {
+    if (existente.origen !== "API") {
       throw new ConflictoIdempotenciaError();
     }
 
-    return existente;
+    const mismoCredito = existente.id_credito === pago.idCredito;
+    const mismoMonto = BigInt(existente.monto_centavos) === BigInt(montoCentavos);
+    const mismaFecha = existente.fecha === fecha;
+    const mismoCanal = existente.canal === canal;
+
+    if (!mismoCredito || !mismoMonto || !mismaFecha || !mismoCanal) {
+      throw new ConflictoIdempotenciaError();
+    }
+
+    return this.convertirFila(existente);
   }
 
-  private convertirFila(
-    fila: FilaPago
-  ): PagoRegistrado {
-    const monto = Dinero.desde(
-      (Number(fila.monto_centavos) / 100).toFixed(2)
-    );
-
+  private convertirFila(fila: FilaPago): PagoRegistrado {
     return {
       idPago: fila.id_pago,
       idCredito: fila.id_credito,
       claveIdempotencia: fila.clave_idempotencia,
-      monto
+      monto: Dinero.desde(
+        (Number(fila.monto_centavos) / 100).toFixed(2)
+      )
     };
   }
 }

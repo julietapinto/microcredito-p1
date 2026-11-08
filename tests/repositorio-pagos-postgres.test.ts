@@ -1,5 +1,4 @@
-
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+﻿import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { Dinero } from "../src/dominio/dinero.js";
 import {
@@ -13,14 +12,14 @@ describe("RepositorioPagosPostgres", () => {
 
   const clave = "TEST-IDEM-POSTGRES-001";
   const idCredito = "CV-2026-0001";
+  const fecha = "2026-11-01";
+  const canal = "efectivo";
 
   beforeAll(() => {
     const connectionString = process.env.DATABASE_URL;
 
-    if (!connectionString) {
-      throw new Error(
-        "Debes configurar DATABASE_URL antes de ejecutar estas pruebas."
-      );
+    if (!connectionString?.includes("/credito_vecino_test")) {
+      throw new Error("Las pruebas requieren credito_vecino_test.");
     }
 
     pool = new Pool({ connectionString });
@@ -42,94 +41,54 @@ describe("RepositorioPagosPostgres", () => {
     }
   });
 
-  it("registra un pago nuevo en PostgreSQL", async () => {
-    const pago = {
-      idPago: "TEST-PAGO-001",
-      idCredito,
-      claveIdempotencia: clave,
-      monto: Dinero.desde("100.00")
-    };
+  const crearPago = (monto = "100.00", credito = idCredito) => ({
+    idPago: "TEST-PAGO-001",
+    idCredito: credito,
+    claveIdempotencia: clave,
+    monto: Dinero.desde(monto)
+  });
 
+  it("registra un pago nuevo", async () => {
     const guardado = await repositorio.guardarAsync(
-      pago,
-      "2026-11-01",
-      "efectivo"
+      crearPago(), fecha, canal
     );
-
     expect(guardado.idCredito).toBe(idCredito);
-    expect(guardado.claveIdempotencia).toBe(clave);
     expect(guardado.monto.comoTexto()).toBe("100.00");
   });
 
-  it("recupera el pago original cuando se repite la misma clave", async () => {
-    const pago = {
-      idPago: "TEST-PAGO-002",
-      idCredito,
-      claveIdempotencia: clave,
-      monto: Dinero.desde("150.00")
-    };
-
+  it("recupera el pago original al repetir la misma solicitud", async () => {
     const primero = await repositorio.guardarAsync(
-      pago,
-      "2026-11-01",
-      "efectivo"
+      crearPago(), fecha, canal
     );
-
     const segundo = await repositorio.guardarAsync(
-      pago,
-      "2026-11-01",
-      "efectivo"
+      crearPago(), fecha, canal
     );
-
     expect(segundo.idPago).toBe(primero.idPago);
-    expect(segundo.monto.comoTexto()).toBe("150.00");
+
+    const conteo = await pool.query(
+      "SELECT COUNT(*)::int AS total FROM pagos WHERE clave_idempotencia=$1",
+      [clave]
+    );
+    expect(conteo.rows[0].total).toBe(1);
   });
 
-  it("rechaza una clave reutilizada con otro monto", async () => {
-    const pagoOriginal = {
-      idPago: "TEST-PAGO-003",
-      idCredito,
-      claveIdempotencia: clave,
-      monto: Dinero.desde("200.00")
-    };
-
-    await repositorio.guardarAsync(
-      pagoOriginal,
-      "2026-11-01",
-      "efectivo"
-    );
-
-    const pagoDiferente = {
-      ...pagoOriginal,
-      idPago: "TEST-PAGO-004",
-      monto: Dinero.desde("250.00")
-    };
+  it.each([
+    ["otro monto", crearPago("250.00"), fecha, canal],
+    ["otro crédito", crearPago("100.00", "CV-2026-OTRO"), fecha, canal],
+    ["otra fecha", crearPago(), "2026-11-02", canal],
+    ["otro canal", crearPago(), fecha, "transferencia"]
+  ])("rechaza la misma clave con %s", async (_caso, pago, otraFecha, otroCanal) => {
+    await repositorio.guardarAsync(crearPago(), fecha, canal);
 
     await expect(
-      repositorio.guardarAsync(
-        pagoDiferente,
-        "2026-11-01",
-        "efectivo"
-      )
+      repositorio.guardarAsync(pago, otraFecha, otroCanal)
     ).rejects.toBeInstanceOf(ConflictoIdempotenciaError);
   });
 
-  it("permite recuperar un pago mediante su clave", async () => {
-    const pago = {
-      idPago: "TEST-PAGO-005",
-      idCredito,
-      claveIdempotencia: clave,
-      monto: Dinero.desde("300.00")
-    };
+  it("recupera un pago mediante su clave", async () => {
+    await repositorio.guardarAsync(crearPago("300.00"), fecha, "transferencia");
 
-    await repositorio.guardarAsync(
-      pago,
-      "2026-11-01",
-      "transferencia"
-    );
-
-    const recuperado =
-      await repositorio.buscarPorClaveAsync(clave);
+    const recuperado = await repositorio.buscarPorClaveAsync(clave);
 
     expect(recuperado).toBeDefined();
     expect(recuperado?.monto.comoTexto()).toBe("300.00");
