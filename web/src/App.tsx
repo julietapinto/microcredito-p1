@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter,
   NavLink,
@@ -6,6 +5,8 @@ import {
   Route,
   Routes,
 } from 'react-router-dom'
+
+import SolicitudCredito from './pages/SolicitudCredito'
 
 const pantallas = [
   {
@@ -45,6 +46,11 @@ const pantallas = [
   },
 ]
 
+/*
+ * Componente temporal.
+ * Lo utilizamos mientras construimos individualmente
+ * las otras seis pantallas.
+ */
 function Pantalla({
   nombre,
   descripcion,
@@ -73,14 +79,18 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-slate-100 md:flex">
-        <aside className="bg-slate-900 p-5 text-white md:min-h-screen md:w-72 md:shrink-0">
-          <h1 className="text-xl font-bold">
-            Sistema de Microcréditos
-          </h1>
 
-          <p className="mt-1 text-sm text-slate-400">
-            Plataforma de gestión
-          </p>
+        {/* MENÚ LATERAL */}
+        <aside className="bg-slate-900 p-5 text-white md:min-h-screen md:w-72 md:shrink-0">
+          <div>
+            <h1 className="text-xl font-bold">
+              Sistema de Microcréditos
+            </h1>
+
+            <p className="mt-1 text-sm text-slate-400">
+              Plataforma de gestión
+            </p>
+          </div>
 
           <nav
             aria-label="Navegación principal"
@@ -104,39 +114,106 @@ function App() {
           </nav>
         </aside>
 
+        {/* CONTENIDO PRINCIPAL */}
         <main className="min-w-0 flex-1 p-5 md:p-8">
+
           <header className="mb-6">
-            <p className="text-sm text-slate-500">
-              Proyecto final — E1
+            <p className="text-sm font-medium text-emerald-700">
+              Crédito Vecino
             </p>
+
             <h2 className="text-xl font-semibold text-slate-800">
               Gestión de microcréditos
             </h2>
           </header>
 
+          {/* RUTAS */}
           <Routes>
+
+            {/* Al entrar a la aplicación */}
             <Route
               path="/"
               element={<Navigate to="/solicitud" replace />}
             />
 
-            {pantallas.map((pantalla) => (
-              <Route
-                key={pantalla.ruta}
-                path={pantalla.ruta}
-                element={
-                  <Pantalla
-                    nombre={pantalla.nombre}
-                    descripcion={pantalla.descripcion}
-                  />
-                }
-              />
-            ))}
+            {/* 1. SOLICITUD DE CRÉDITO */}
+            <Route
+              path="/solicitud"
+              element={<SolicitudCredito />}
+            />
 
+            {/* 2. DETALLE DEL CRÉDITO */}
+            <Route
+              path="/credito"
+              element={
+                <Pantalla
+                  nombre="Detalle del crédito"
+                  descripcion="Consulta del estado y movimientos de un crédito."
+                />
+              }
+            />
+
+            {/* 3. REGISTRO DE PAGO */}
+            <Route
+              path="/pago"
+              element={
+                <Pantalla
+                  nombre="Registro de pago"
+                  descripcion="Consulta de desglose y confirmación de pagos."
+                />
+              }
+            />
+
+            {/* 4. PLAN DE AMORTIZACIÓN */}
+            <Route
+              path="/amortizacion"
+              element={
+                <Pantalla
+                  nombre="Plan de amortización"
+                  descripcion="Consulta de cuotas y fechas programadas."
+                />
+              }
+            />
+
+            {/* 5. DETALLE DE MORA */}
+            <Route
+              path="/mora"
+              element={
+                <Pantalla
+                  nombre="Detalle de mora"
+                  descripcion="Consulta del atraso y sus tramos."
+                />
+              }
+            />
+
+            {/* 6. TABLERO GERENCIAL */}
+            <Route
+              path="/tablero"
+              element={
+                <Pantalla
+                  nombre="Tablero gerencial"
+                  descripcion="Indicadores de cartera y situación financiera."
+                />
+              }
+            />
+
+            {/* 7. CIERRE DIARIO Y MENSUAL */}
+            <Route
+              path="/cierre"
+              element={
+                <Pantalla
+                  nombre="Cierre diario y mensual"
+                  descripcion="Desembolsos y recuperaciones por concepto."
+                />
+              }
+            />
+
+            {/* Ruta inexistente */}
             <Route
               path="*"
               element={<Navigate to="/solicitud" replace />}
             />
+
           </Routes>
         </main>
       </div>
