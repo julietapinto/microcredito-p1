@@ -4,3 +4,4 @@ dist/
 *.log
 .env
 datos/
+!datos/rag-store.json
