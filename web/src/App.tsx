@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter,
   NavLink,
@@ -7,51 +8,21 @@ import {
 } from 'react-router-dom'
 
 import SolicitudCredito from './pages/SolicitudCredito'
+import DetalleCredito from './pages/DetalleCredito'
+import PlanAmortizacion from './pages/PlanAmortizacion'
+import DetalleMora from './pages/DetalleMora'
 
 const pantallas = [
-  {
-    ruta: '/solicitud',
-    nombre: 'Solicitud de crédito',
-    descripcion: 'Registro de clientes y originación de créditos.',
-  },
-  {
-    ruta: '/credito',
-    nombre: 'Detalle del crédito',
-    descripcion: 'Consulta del estado y movimientos de un crédito.',
-  },
-  {
-    ruta: '/pago',
-    nombre: 'Registro de pago',
-    descripcion: 'Consulta de desglose y confirmación de pagos.',
-  },
-  {
-    ruta: '/amortizacion',
-    nombre: 'Plan de amortización',
-    descripcion: 'Consulta de cuotas y fechas programadas.',
-  },
-  {
-    ruta: '/mora',
-    nombre: 'Detalle de mora',
-    descripcion: 'Consulta del atraso y sus tramos.',
-  },
-  {
-    ruta: '/tablero',
-    nombre: 'Tablero gerencial',
-    descripcion: 'Indicadores de cartera y situación financiera.',
-  },
-  {
-    ruta: '/cierre',
-    nombre: 'Cierre diario y mensual',
-    descripcion: 'Desembolsos y recuperaciones por concepto.',
-  },
+  { ruta: '/solicitud', nombre: 'Solicitud de crédito' },
+  { ruta: '/credito', nombre: 'Detalle del crédito' },
+  { ruta: '/pago', nombre: 'Registro de pago' },
+  { ruta: '/amortizacion', nombre: 'Plan de amortización' },
+  { ruta: '/mora', nombre: 'Detalle de mora' },
+  { ruta: '/tablero', nombre: 'Tablero gerencial' },
+  { ruta: '/cierre', nombre: 'Cierre diario y mensual' },
 ]
 
-/*
- * Componente temporal.
- * Lo utilizamos mientras construimos individualmente
- * las otras seis pantallas.
- */
-function Pantalla({
+function PantallaPendiente({
   nombre,
   descripcion,
 }: {
@@ -59,17 +30,25 @@ function Pantalla({
   descripcion: string
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="space-y-6">
       <h2 className="text-2xl font-bold text-slate-900">
         {nombre}
       </h2>
 
-      <p className="mt-2 text-slate-600">
+      <p className="text-slate-600">
         {descripcion}
       </p>
 
-      <div className="mt-8 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
-        Pantalla preparada para implementar su funcionalidad.
+      <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+        <p className="text-3xl">⏳</p>
+
+        <h3 className="mt-4 font-semibold text-slate-900">
+          Pantalla en construcción
+        </h3>
+
+        <p className="mt-2 text-sm text-slate-500">
+          Próximamente implementaremos esta sección.
+        </p>
       </div>
     </section>
   )
@@ -79,11 +58,13 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-slate-100 md:flex">
-
-        {/* MENÚ LATERAL */}
         <aside className="bg-slate-900 p-5 text-white md:min-h-screen md:w-72 md:shrink-0">
-          <div>
-            <h1 className="text-xl font-bold">
+          <div className="border-b border-slate-700 pb-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
+              Crédito Vecino
+            </p>
+
+            <h1 className="mt-1 text-xl font-bold">
               Sistema de Microcréditos
             </h1>
 
@@ -94,7 +75,7 @@ function App() {
 
           <nav
             aria-label="Navegación principal"
-            className="mt-7 flex gap-2 overflow-x-auto md:flex-col"
+            className="mt-6 flex gap-2 overflow-x-auto md:flex-col"
           >
             {pantallas.map((pantalla) => (
               <NavLink
@@ -104,7 +85,7 @@ function App() {
                   `shrink-0 rounded-lg px-4 py-3 text-sm transition-colors ${
                     isActive
                       ? 'bg-emerald-600 font-semibold text-white'
-                      : 'text-slate-300 hover:bg-slate-800'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`
                 }
               >
@@ -112,109 +93,104 @@ function App() {
               </NavLink>
             ))}
           </nav>
+
+          <div className="mt-8 hidden border-t border-slate-700 pt-5 md:block">
+            <p className="text-xs text-slate-500">
+              Proyecto Final
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              Análisis de Sistemas II
+            </p>
+          </div>
         </aside>
 
-        {/* CONTENIDO PRINCIPAL */}
-        <main className="min-w-0 flex-1 p-5 md:p-8">
+        <main className="min-w-0 flex-1">
+          <header className="border-b border-slate-200 bg-white px-5 py-4 md:px-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-700">
+                  Crédito Vecino, S. A.
+                </p>
 
-          <header className="mb-6">
-            <p className="text-sm font-medium text-emerald-700">
-              Crédito Vecino
-            </p>
+                <h2 className="text-lg font-semibold text-slate-800">
+                  Gestión de microcréditos
+                </h2>
+              </div>
 
-            <h2 className="text-xl font-semibold text-slate-800">
-              Gestión de microcréditos
-            </h2>
+              <div className="hidden text-right sm:block">
+                <p className="text-sm font-medium text-slate-700">
+                  E1
+                </p>
+                <p className="text-xs text-slate-500">
+                  Interfaz React
+                </p>
+              </div>
+            </div>
           </header>
 
-          {/* RUTAS */}
-          <Routes>
+          <div className="p-5 md:p-8">
+            <Routes>
+              <Route
+                path="/"
+                element={<Navigate to="/solicitud" replace />}
+              />
 
-            {/* Al entrar a la aplicación */}
-            <Route
-              path="/"
-              element={<Navigate to="/solicitud" replace />}
-            />
+              <Route
+                path="/solicitud"
+                element={<SolicitudCredito />}
+              />
 
-            {/* 1. SOLICITUD DE CRÉDITO */}
-            <Route
-              path="/solicitud"
-              element={<SolicitudCredito />}
-            />
+              <Route
+                path="/credito"
+                element={<DetalleCredito />}
+              />
 
-            {/* 2. DETALLE DEL CRÉDITO */}
-            <Route
-              path="/credito"
-              element={
-                <Pantalla
-                  nombre="Detalle del crédito"
-                  descripcion="Consulta del estado y movimientos de un crédito."
-                />
-              }
-            />
+              <Route
+                path="/pago"
+                element={
+                  <PantallaPendiente
+                    nombre="Registro de pago"
+                    descripcion="Consulta y confirmación de pagos."
+                  />
+                }
+              />
 
-            {/* 3. REGISTRO DE PAGO */}
-            <Route
-              path="/pago"
-              element={
-                <Pantalla
-                  nombre="Registro de pago"
-                  descripcion="Consulta de desglose y confirmación de pagos."
-                />
-              }
-            />
+              <Route
+                path="/amortizacion"
+                element={<PlanAmortizacion />}
+              />
 
-            {/* 4. PLAN DE AMORTIZACIÓN */}
-            <Route
-              path="/amortizacion"
-              element={
-                <Pantalla
-                  nombre="Plan de amortización"
-                  descripcion="Consulta de cuotas y fechas programadas."
-                />
-              }
-            />
+              <Route
+                path="/mora"
+                element={<DetalleMora />}
+              />
 
-            {/* 5. DETALLE DE MORA */}
-            <Route
-              path="/mora"
-              element={
-                <Pantalla
-                  nombre="Detalle de mora"
-                  descripcion="Consulta del atraso y sus tramos."
-                />
-              }
-            />
+              <Route
+                path="/tablero"
+                element={
+                  <PantallaPendiente
+                    nombre="Tablero gerencial"
+                    descripcion="Indicadores de cartera y riesgo."
+                  />
+                }
+              />
 
-            {/* 6. TABLERO GERENCIAL */}
-            <Route
-              path="/tablero"
-              element={
-                <Pantalla
-                  nombre="Tablero gerencial"
-                  descripcion="Indicadores de cartera y situación financiera."
-                />
-              }
-            />
+              <Route
+                path="/cierre"
+                element={
+                  <PantallaPendiente
+                    nombre="Cierre diario y mensual"
+                    descripcion="Desembolsos y recuperaciones consolidadas."
+                  />
+                }
+              />
 
-            {/* 7. CIERRE DIARIO Y MENSUAL */}
-            <Route
-              path="/cierre"
-              element={
-                <Pantalla
-                  nombre="Cierre diario y mensual"
-                  descripcion="Desembolsos y recuperaciones por concepto."
-                />
-              }
-            />
-
-            {/* Ruta inexistente */}
-            <Route
-              path="*"
-              element={<Navigate to="/solicitud" replace />}
-            />
-
-          </Routes>
+              <Route
+                path="*"
+                element={<Navigate to="/solicitud" replace />}
+              />
+            </Routes>
+          </div>
         </main>
       </div>
     </BrowserRouter>
