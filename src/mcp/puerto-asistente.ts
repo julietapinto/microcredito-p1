@@ -174,12 +174,12 @@ export interface PuertoAsistente {
     fechaCorte: string,
     ventanaDias: number
   ): Promise<ProximosVencimientosMcp>;
-  
+
     listarCreditosEnMora(
     fechaCorte: string,
     tramo?: TramoMora
   ): Promise<ListadoCreditosMoraMcp>;
-  
+
     consultarCartera(
     fechaCorte: string
   ): Promise<ConsultaCarteraMcp>;
@@ -188,11 +188,11 @@ export interface PuertoAsistente {
     tipo: TipoCierreMcp,
     fechaCorte: string
   ): Promise<ConsultaCierreMcp>;
-  
+
     registrarPago(
     solicitud: SolicitudRegistroPagoMcp
   ): Promise<PagoRegistradoMcp>;
 
-  
-  
+
+
 }

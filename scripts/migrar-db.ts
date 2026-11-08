@@ -1,16 +1,16 @@
-﻿
+
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
 import { validarBaseDePruebas } from "./validar-db-pruebas.js";
 
 async function main(): Promise<void> {
-  // 1. Obtener y validar la conexi├│n antes de crear el Pool.
+  // 1. Obtener y validar la conexión antes de crear el Pool.
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
     throw new Error(
-        "OPERACI├ôN BLOQUEADA: defina DATABASE_URL antes de ejecutar las migraciones."
+        "OPERACIÓN BLOQUEADA: defina DATABASE_URL antes de ejecutar las migraciones."
     );
   }
 
@@ -20,7 +20,7 @@ async function main(): Promise<void> {
       "Base de datos validada: credito_vecino_test"
   );
 
-  // 2. Crear conexi├│n ├║nicamente despu├®s de validar la base.
+  // 2. Crear conexión únicamente después de validar la base.
   const pool = new Pool({ connectionString });
 
   let client;

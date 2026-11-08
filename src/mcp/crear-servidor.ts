@@ -5,6 +5,17 @@ import type {
   PuertoAsistente
 } from "./puerto-asistente.js";
 
+import {
+  esquemaConsultaCartera,
+  esquemaConsultaCierre,
+  esquemaConsultaCredito,
+  esquemaDeudaCuota,
+  esquemaExplicacionMora,
+  esquemaListadoMora,
+  esquemaProximosVencimientos,
+  esquemaRespuestaRegistroPago
+} from "./esquemas-salida.js";
+
 const entradaConsultaCredito = z.object({
   idCredito: z
     .string()
@@ -82,7 +93,11 @@ export function crearServidorMcp(
           content: [
             {
               type: "text",
-              text: JSON.stringify(resultado, null, 2)
+             text: JSON.stringify(
+              esquemaConsultaCredito.parse(resultado),
+              null,
+              2
+            )
             }
           ]
         };
@@ -145,7 +160,11 @@ export function crearServidorMcp(
           content: [
             {
               type: "text",
-              text: JSON.stringify(resultado, null, 2)
+              text: JSON.stringify(
+            esquemaDeudaCuota.parse(resultado),
+            null,
+            2
+            )
             }
           ]
         };
@@ -201,7 +220,11 @@ export function crearServidorMcp(
         content: [
           {
             type: "text",
-            text: JSON.stringify(resultado, null, 2)
+            text: JSON.stringify(
+  esquemaExplicacionMora.parse(resultado),
+  null,
+  2
+)
           }
         ]
       };
@@ -270,7 +293,13 @@ servidor.registerTool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(resultado, null, 2)
+            text: JSON.stringify(
+  esquemaProximosVencimientos.parse(
+    resultado
+  ),
+  null,
+  2
+)
           }
         ]
       };
@@ -292,7 +321,7 @@ servidor.registerTool(
           }
         ]
       };
-      
+
     }
   }
 );
@@ -341,7 +370,11 @@ servidor.registerTool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(resultado, null, 2)
+            text: JSON.stringify(
+  esquemaListadoMora.parse(resultado),
+  null,
+  2
+)
           }
         ]
       };
@@ -400,7 +433,11 @@ servidor.registerTool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(resultado, null, 2)
+            text: JSON.stringify(
+  esquemaConsultaCartera.parse(resultado),
+  null,
+  2
+)
           }
         ]
       };
@@ -468,7 +505,11 @@ servidor.registerTool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(resultado, null, 2)
+           text: JSON.stringify(
+  esquemaConsultaCierre.parse(resultado),
+  null,
+  2
+)
           }
         ]
       };
@@ -546,35 +587,38 @@ servidor.registerTool(
     aprobacionHumana
   }) => {
     try {
-      if (!aprobacionHumana) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  estado: "PENDIENTE_APROBACION",
-                  ejecutado: false,
-                  requiereAprobacion: true,
-                  mensaje:
-                    "El pago no fue registrado. Se requiere confirmación humana.",
-                  propuesta: {
-                    idCredito,
-                    monto: {
-                      monto,
-                      moneda
-                    },
-                    fechaCorte,
-                    claveIdempotencia
-                  }
-                },
-                null,
-                2
-              )
-            }
-          ]
-        };
+if (!aprobacionHumana) {
+  const propuesta =
+    esquemaRespuestaRegistroPago.parse({
+      estado: "PENDIENTE_APROBACION",
+      ejecutado: false,
+      requiereAprobacion: true,
+      mensaje:
+        "El pago no fue registrado. Se requiere confirmación humana.",
+      propuesta: {
+        idCredito,
+        monto: {
+          monto,
+          moneda
+        },
+        fechaCorte,
+        claveIdempotencia
       }
+    });
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          propuesta,
+          null,
+          2
+        )
+      }
+    ]
+  };
+}
 
       if (!puerto.registrarPago) {
         throw new Error(
@@ -597,7 +641,13 @@ servidor.registerTool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(resultado, null, 2)
+            text: JSON.stringify(
+  esquemaRespuestaRegistroPago.parse(
+    resultado
+  ),
+  null,
+  2
+)
           }
         ]
       };

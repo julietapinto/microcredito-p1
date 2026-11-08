@@ -9,8 +9,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "generate-openapi": "npx tsx scripts/generate-openapi.ts",
-    "mcp": "tsx src/mcp/servidor.ts",
     "db:migrate": "tsx scripts/migrar-db.ts",
+    "db:seed": "tsx src/persistencia/cargar-canonico.ts",
+    "mcp": "tsx src/mcp/servidor.ts",
     "chat": "tsx scripts/chat-mcp.ts"
   },
   "engines": {
@@ -34,8 +35,9 @@
   "homepage": "https://github.com/julietapinto/microcredito-p1#readme",
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "@modelcontextprotocol/client": "^2.4.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "@modelcontextprotocol/server": "^2.3.1",
+    "@modelcontextprotocol/server": "^2.4.0",
     "date-fns": "^4.4.0",
     "decimal.js": "^10.6.0",
     "pg": "^8.23.1",
@@ -43,7 +45,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "^2.3.1",
     "@types/node": "^26.4.0",
     "@types/pg": "^8.23.1",
     "esbuild": "^0.28.2",

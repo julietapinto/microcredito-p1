@@ -7,7 +7,7 @@ import {
 import {
   AdaptadorAsistenteMemoria
 } from "../src/mcp/adaptador-asistente-memoria.js";
-  
+
 import {
   crearDatosDemostracion
 } from "../src/mcp/datos-asistente-memoria.js";
@@ -230,9 +230,9 @@ it("explica la mora por tramos recorridos", async () => {
       monto: "28.75",
       moneda: "GTQ"
     }
-    
+
   });
-  
+
 });
 it("consulta el resumen de cartera en una fecha de corte", async () => {
   const adaptador =
@@ -279,4 +279,180 @@ it("consulta el resumen de cartera en una fecha de corte", async () => {
     }
   });
 });
+  it("consulta el cierre mensual", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    const resultado =
+      await adaptador.consultarCierre(
+        "MENSUAL",
+        "2026-10-31"
+      );
+
+    expect(resultado).toMatchObject({
+      tipo: "MENSUAL",
+      fechaCorte: "2026-10-31",
+      periodoDesde: "2026-10-01",
+      periodoHasta: "2026-10-31",
+      desembolsos: {
+        monto: "2500.00",
+        moneda: "GTQ"
+      },
+      recuperaciones: {
+        total: {
+          monto: "0.00",
+          moneda: "GTQ"
+        }
+      }
+    });
+  });
+    it("registra un pago aplicando la prelación", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    const resultado =
+      await adaptador.registrarPago({
+        idCredito: "CV-2026-0043",
+        monto: {
+          monto: "1228.75",
+          moneda: "GTQ"
+        },
+        fechaCorte: "2026-10-31",
+        claveIdempotencia:
+          "pago-cuota-0043",
+        aprobadoPorHumano: true
+      });
+
+    expect(resultado).toMatchObject({
+      idPago: "PAGO-0001",
+      idCredito: "CV-2026-0043",
+      reutilizado: false,
+      estadoCredito: "VIGENTE",
+      aplicacion: {
+        gastos: {
+          monto: "25.00",
+          moneda: "GTQ"
+        },
+        interesMoratorio: {
+          monto: "28.75",
+          moneda: "GTQ"
+        },
+        interesCorriente: {
+          monto: "25.00",
+          moneda: "GTQ"
+        },
+        capital: {
+          monto: "1150.00",
+          moneda: "GTQ"
+        }
+      }
+    });
+  });
+
+  it("no duplica un pago con la misma clave", async () => {
+    const datos = crearDatosDemostracion();
+
+    const adaptador =
+      new AdaptadorAsistenteMemoria(datos);
+
+    const solicitud = {
+      idCredito: "CV-2026-0043",
+      monto: {
+        monto: "1228.75",
+        moneda: "GTQ"
+      },
+      fechaCorte: "2026-10-31",
+      claveIdempotencia:
+        "pago-idempotente-0043",
+      aprobadoPorHumano: true as const
+    };
+
+    await adaptador.registrarPago(solicitud);
+
+    const segundoResultado =
+      await adaptador.registrarPago(solicitud);
+
+    expect(
+      segundoResultado.reutilizado
+    ).toBe(true);
+
+    expect(
+      datos.movimientos.filter(
+        (movimiento) =>
+          movimiento.tipo === "PAGO"
+      )
+    ).toHaveLength(1);
+  });
+    it("rechaza pagos para créditos incobrables", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    await expect(
+      adaptador.registrarPago({
+        idCredito: "CV-2026-0045",
+        monto: {
+          monto: "840.00",
+          moneda: "GTQ"
+        },
+        fechaCorte: "2026-10-31",
+        claveIdempotencia:
+          "pago-incobrable-0045",
+        aprobadoPorHumano: true
+      })
+    ).rejects.toThrow(
+      "No se pueden registrar pagos para un crédito incobrable"
+    );
+  });
+
+  it("rechaza un pago menor al monto exacto", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    await expect(
+      adaptador.registrarPago({
+        idCredito: "CV-2026-0043",
+        monto: {
+          monto: "1200.00",
+          moneda: "GTQ"
+        },
+        fechaCorte: "2026-10-31",
+        claveIdempotencia:
+          "pago-menor-0043",
+        aprobadoPorHumano: true
+      })
+    ).rejects.toThrow(
+      "El monto del pago debe ser exactamente 1228.75 GTQ"
+    );
+  });
+
+  it("rechaza un pago mayor al monto exacto", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    await expect(
+      adaptador.registrarPago({
+        idCredito: "CV-2026-0043",
+        monto: {
+          monto: "1300.00",
+          moneda: "GTQ"
+        },
+        fechaCorte: "2026-10-31",
+        claveIdempotencia:
+          "pago-mayor-0043",
+        aprobadoPorHumano: true
+      })
+    ).rejects.toThrow(
+      "El monto del pago debe ser exactamente 1228.75 GTQ"
+    );
+  });
 });
