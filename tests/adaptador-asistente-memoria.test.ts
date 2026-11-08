@@ -387,4 +387,72 @@ it("consulta el resumen de cartera en una fecha de corte", async () => {
       )
     ).toHaveLength(1);
   });
+    it("rechaza pagos para créditos incobrables", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    await expect(
+      adaptador.registrarPago({
+        idCredito: "CV-2026-0045",
+        monto: {
+          monto: "840.00",
+          moneda: "GTQ"
+        },
+        fechaCorte: "2026-10-31",
+        claveIdempotencia:
+          "pago-incobrable-0045",
+        aprobadoPorHumano: true
+      })
+    ).rejects.toThrow(
+      "No se pueden registrar pagos para un crédito incobrable"
+    );
+  });
+
+  it("rechaza un pago menor al monto exacto", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    await expect(
+      adaptador.registrarPago({
+        idCredito: "CV-2026-0043",
+        monto: {
+          monto: "1200.00",
+          moneda: "GTQ"
+        },
+        fechaCorte: "2026-10-31",
+        claveIdempotencia:
+          "pago-menor-0043",
+        aprobadoPorHumano: true
+      })
+    ).rejects.toThrow(
+      "El monto del pago debe ser exactamente 1228.75 GTQ"
+    );
+  });
+
+  it("rechaza un pago mayor al monto exacto", async () => {
+    const adaptador =
+      new AdaptadorAsistenteMemoria(
+        crearDatosDemostracion()
+      );
+
+    await expect(
+      adaptador.registrarPago({
+        idCredito: "CV-2026-0043",
+        monto: {
+          monto: "1300.00",
+          moneda: "GTQ"
+        },
+        fechaCorte: "2026-10-31",
+        claveIdempotencia:
+          "pago-mayor-0043",
+        aprobadoPorHumano: true
+      })
+    ).rejects.toThrow(
+      "El monto del pago debe ser exactamente 1228.75 GTQ"
+    );
+  });
 });
