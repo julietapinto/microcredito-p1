@@ -1,5 +1,6 @@
 
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 type Dinero = {
   valor: string
@@ -34,7 +35,8 @@ function mostrarDinero(dinero?: Dinero) {
 }
 
 export default function PlanAmortizacion() {
-  const [creditoId, setCreditoId] = useState('')
+  const [params] = useSearchParams()
+  const [creditoId, setCreditoId] = useState(params.get('id') || '')
   const [plan, setPlan] = useState<Plan | null>(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')

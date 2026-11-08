@@ -7,8 +7,8 @@ import {
   Routes,
 } from 'react-router-dom'
 
-import SolicitudCredito from './pages/SolicitudCredito'
-import DetalleCredito from './pages/DetalleCredito'
+import { useState } from 'react'
+import { Solicitud, Credito, Pago, Reporte } from './pages/Operaciones'
 import PlanAmortizacion from './pages/PlanAmortizacion'
 import DetalleMora from './pages/DetalleMora'
 
@@ -22,38 +22,10 @@ const pantallas = [
   { ruta: '/cierre', nombre: 'Cierre diario y mensual' },
 ]
 
-function PantallaPendiente({
-  nombre,
-  descripcion,
-}: {
-  nombre: string
-  descripcion: string
-}) {
-  return (
-    <section className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-900">
-        {nombre}
-      </h2>
-
-      <p className="text-slate-600">
-        {descripcion}
-      </p>
-
-      <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-        <p className="text-3xl">⏳</p>
-
-        <h3 className="mt-4 font-semibold text-slate-900">
-          Pantalla en construcción
-        </h3>
-
-        <p className="mt-2 text-sm text-slate-500">
-          Próximamente implementaremos esta sección.
-        </p>
-      </div>
-    </section>
-  )
+function Chat() {
+  const [abierto, setAbierto] = useState(false)
+  return <div className="fixed bottom-4 right-4 z-10">{abierto && <section aria-label="Asistente" className="mb-2 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-4 shadow-xl"><div className="flex justify-between"><h2 className="font-bold">Asistente Crédito Vecino</h2><button aria-label="Cerrar asistente" onClick={() => setAbierto(false)}>✕</button></div><p className="mt-4 text-sm text-slate-600">El asistente estará disponible cuando se integre el módulo correspondiente.</p><label className="mt-4 block text-sm">Mensaje<textarea disabled className="mt-1 w-full rounded border border-slate-300 p-2" placeholder="Integración pendiente" /></label><button disabled className="rounded bg-slate-300 px-4 py-2">Enviar</button></section>}<button aria-expanded={abierto} onClick={() => setAbierto(!abierto)} className="rounded-full bg-emerald-700 px-5 py-3 font-bold text-white shadow-lg">{abierto ? 'Cerrar chat' : 'Abrir chat'}</button></div>
 }
-
 function App() {
   return (
     <BrowserRouter>
@@ -137,21 +109,18 @@ function App() {
 
               <Route
                 path="/solicitud"
-                element={<SolicitudCredito />}
+                element={<Solicitud />}
               />
 
               <Route
                 path="/credito"
-                element={<DetalleCredito />}
+                element={<Credito />}
               />
 
               <Route
                 path="/pago"
                 element={
-                  <PantallaPendiente
-                    nombre="Registro de pago"
-                    descripcion="Consulta y confirmación de pagos."
-                  />
+                  <Pago />
                 }
               />
 
@@ -168,20 +137,14 @@ function App() {
               <Route
                 path="/tablero"
                 element={
-                  <PantallaPendiente
-                    nombre="Tablero gerencial"
-                    descripcion="Indicadores de cartera y riesgo."
-                  />
+                  <Reporte tipo="tablero" />
                 }
               />
 
               <Route
                 path="/cierre"
                 element={
-                  <PantallaPendiente
-                    nombre="Cierre diario y mensual"
-                    descripcion="Desembolsos y recuperaciones consolidadas."
-                  />
+                  <Reporte tipo="cierre" />
                 }
               />
 
@@ -192,6 +155,7 @@ function App() {
             </Routes>
           </div>
         </main>
+        <Chat />
       </div>
     </BrowserRouter>
   )
