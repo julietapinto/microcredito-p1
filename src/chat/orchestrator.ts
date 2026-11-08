@@ -1,3 +1,6 @@
+import { model } from './llm.js';
+import { SYSTEM_PROMPT } from './systemPrompt.js';
+
 import { mcpClient } from './mcpClient.js';
 import { retrieve } from '../rag/retrieve.js';
 import { formatCitations } from '../rag/cite.js';
@@ -137,7 +140,7 @@ export async function chat(userMessage: string, _history: (HumanMessage | AIMess
     };
   }
 
-  // ==========================================
+   // ==========================================
   // 4. RAG (Políticas)
   // ==========================================
   const chunks = await retrieve(userMessage);
@@ -147,10 +150,35 @@ export async function chat(userMessage: string, _history: (HumanMessage | AIMess
     const cita = formatCitations(topChunks);
     const textoRecuperado = topChunks.map(c => c.texto).join('\n\n');
 
-    return {
-      type: 'text',
-      content: `Según las políticas de Crédito Vecino:\n\n${textoRecuperado}\n\nFuente(s):\n${cita}`
-    };
+    // NUEVO: Usar el LLM para generar la respuesta
+    try {
+      const promptUsuario = `
+        CONTEXTO DEL SISTEMA (Políticas):
+        ${textoRecuperado}
+
+        Fuentes:
+        ${cita}
+
+        Pregunta del usuario: ${userMessage}
+      `;
+
+      const respuestaLLM = await model.invoke([
+        ["system", SYSTEM_PROMPT],
+        ["user", promptUsuario]
+      ]);
+
+      return {
+        type: 'text',
+        content: respuestaLLM.content as string
+      };
+    } catch (error) {
+      console.error("Error conectando con Ollama, usando fallback de texto:", error);
+      // Si Ollama está apagado, devolvemos el texto crudo para no romper el chat
+      return {
+        type: 'text',
+        content: `Según las políticas de Crédito Vecino:\n\n${textoRecuperado}\n\nFuente(s):\n${cita}`
+      };
+    }
   }
 
   // ==========================================
