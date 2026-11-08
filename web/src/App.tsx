@@ -9,6 +9,8 @@ import {
 
 import { useState } from 'react'
 import { Solicitud, Credito, Pago, Reporte } from './pages/Operaciones'
+import Originacion from './pages/Originacion'
+import Historial from './pages/Historial'
 import PlanAmortizacion from './pages/PlanAmortizacion'
 import DetalleMora from './pages/DetalleMora'
 
@@ -109,7 +111,7 @@ function App() {
 
               <Route
                 path="/solicitud"
-                element={<Solicitud />}
+                element={<div className="space-y-5"><Originacion /><Solicitud /></div>}
               />
 
               <Route
@@ -120,7 +122,7 @@ function App() {
               <Route
                 path="/pago"
                 element={
-                  <Pago />
+                  <><Pago /><Historial /></>
                 }
               />
 
