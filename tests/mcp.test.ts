@@ -70,7 +70,7 @@ describe("Servidor MCP", () => {
           const nombresHerramientas =
         herramientas.tools
           .map(
-            (herramienta) =>
+            (herramienta: { name: string }) =>
               herramienta.name
           )
           .sort();
@@ -90,7 +90,10 @@ describe("Servidor MCP", () => {
 
       const herramientasLectura =
         herramientas.tools.filter(
-          (herramienta) =>
+          (herramienta: {
+            name: string;
+            annotations?: unknown;
+          }) =>
             herramienta.name !==
             "registrar_pago"
         );
@@ -114,7 +117,10 @@ describe("Servidor MCP", () => {
 
       const herramientaRegistro =
         herramientas.tools.find(
-          (herramienta) =>
+          (herramienta: {
+            name: string;
+            annotations?: unknown;
+          }) =>
             herramienta.name ===
             "registrar_pago"
         );
