@@ -1,28 +1,58 @@
-import {
-  serveStdio
-} from "@modelcontextprotocol/server/stdio";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import {
-  AdaptadorAsistenteMemoria
-} from "./adaptador-asistente-memoria.js";
+import { crearServidorMcpPostgres } from "./crear-servidor-postgres.js";
+import { crearServicioMcp } from "./servicios/servicio-mcp.js";
 
-import {
-  crearDatosDemostracion
-} from "./datos-asistente-memoria.js";
+async function iniciarServidor(): Promise<void> {
+    const databaseUrl = process.env.DATABASE_URL;
 
-import {
-  crearServidorMcp
-} from "./crear-servidor.js";
+    if (!databaseUrl) {
+        throw new Error(
+            "Debe definir DATABASE_URL para iniciar el servidor MCP."
+        );
+    }
 
-const adaptador =
-  new AdaptadorAsistenteMemoria(
-    crearDatosDemostracion()
-  );
+    const servicio = crearServicioMcp(databaseUrl);
+    const servidor = crearServidorMcpPostgres(servicio.pool);
+    const transporte = new StdioServerTransport();
 
-void serveStdio(
-  () => crearServidorMcp(adaptador)
-);
+    let cierreEnCurso: Promise<void> | undefined;
 
-console.error(
-  "Servidor MCP de Crédito Vecino ejecutándose por stdio"
-);
+    const cerrar = (): Promise<void> => {
+        if (!cierreEnCurso) {
+            cierreEnCurso = (async () => {
+                try {
+                    await servidor.close();
+                } finally {
+                    await servicio.cerrar();
+                }
+            })();
+        }
+
+        return cierreEnCurso;
+    };
+
+    process.stdin.once("end", () => {
+        void cerrar();
+    });
+
+    process.once("SIGINT", () => {
+        void cerrar().finally(() => process.exit(0));
+    });
+
+    process.once("SIGTERM", () => {
+        void cerrar().finally(() => process.exit(0));
+    });
+
+    await servidor.connect(transporte);
+
+    console.error(
+        "Servidor MCP de Crédito Vecino ejecutándose por stdio"
+    );
+}
+
+iniciarServidor().catch((error: unknown) => {
+    console.error("No se pudo iniciar el servidor MCP:", error);
+    process.exitCode = 1;
+});
+

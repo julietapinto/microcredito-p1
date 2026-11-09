@@ -94,7 +94,7 @@ export class AdaptadorAsistenteMemoria
 
   constructor(
     private readonly datos: DatosAsistenteMemoria
-    
+
   ) {}
 
   async consultarCredito(
@@ -621,7 +621,11 @@ async consultarCartera(
     const credito = this.buscarCredito(
       solicitud.idCredito
     );
-
+    if (credito.estado === "INCOBRABLE") {
+      throw new Error(
+        "No se pueden registrar pagos para un crédito incobrable"
+      );
+    }
     const cuota = [...credito.cuotas]
       .filter((actual) => !actual.pagada)
       .sort(
@@ -658,6 +662,16 @@ async consultarCartera(
         deudaCalculada.capital.monto
       )
     };
+        const totalDeuda = deuda.gastos
+      .sumar(deuda.interesMoratorio)
+      .sumar(deuda.interesCorriente)
+      .sumar(deuda.capital);
+
+    if (!monto.esIgualA(totalDeuda)) {
+      throw new Error(
+        `El monto del pago debe ser exactamente ${totalDeuda.comoTexto()} GTQ`
+      );
+    }
 
     const aplicacion = aplicarPrelacion(
       monto,
@@ -688,14 +702,7 @@ async consultarCartera(
         aplicacion.capital
       );
 
-    const totalDeuda = deuda.gastos
-      .sumar(deuda.interesMoratorio)
-      .sumar(deuda.interesCorriente)
-      .sumar(deuda.capital);
-
-    if (totalDeuda.menorOIgualQue(monto)) {
       cuota.pagada = true;
-    }
 
     const continuaEnMora =
       credito.cuotas.some(
@@ -861,7 +868,7 @@ CatalogoPoliticasMora {
         ]
       })
     }
-    
-    
+
+
   ]);
 }

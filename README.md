@@ -422,3 +422,44 @@ La siguiente fase agrega:
 - Verificación de los principios SOLID.
 
 La interfaz se diseña en Figma durante el Proyecto 2; todavía no se implementa como una aplicación real.
+
+## Calendario de cuotas proyectado (E3)
+
+La migración `002_calendario_cuotas.sql` agrega `cuotas_proyectadas`, donde se
+persiste una sola vez el plan de amortización francesa y sus fechas mensuales
+proyectadas. El vencimiento conserva el día del otorgamiento y, cuando un mes
+no contiene ese día, utiliza el último día del mes (por ejemplo, día 31 en
+febrero).
+
+Estas fechas se identifican como `PROYECTADO`: no sustituyen un calendario
+contractual confirmado. Los pagos canónicos históricos permanecen intactos y
+no se asignan automáticamente a cuotas. Por esa razón, el calendario permite
+consultar importes y vencimientos programados, pero no confirma saldo exigible,
+estado de pago ni mora real.
+
+El script `npm run db:migrate` aplica las migraciones SQL en orden y registra
+cada archivo en `schema_migrations`, por lo que puede ejecutarse nuevamente sin
+reaplicar migraciones ya registradas.
+
+## E3 — Aplicación transaccional de pagos y cálculo de deuda
+
+La migración `003_aplicaciones_pagos.sql` incorpora:
+
+- `aplicaciones_pagos`: distribución auditable por cuota y concepto (gastos, moratorio, corriente y capital).
+- `gastos_gestion_cobro`: cargo único de Q25.00 por cuota para créditos sujetos a POL-2026-10 al alcanzar 31 días.
+- `aprobaciones_pago`: evidencia del aprobador, fecha de corte e importe confirmado.
+- `estado_credito`: estado operativo persistido después de registrar pagos.
+
+`calcular_deuda_cuota`, `consultar_credito`, `explicar_mora`, `listar_creditos_mora` y `consultar_cartera` consumen el servicio de deuda basado en el calendario persistido. La herramienta `registrar_pago` valida el total exacto a la fecha de corte, exige aprobación y nombre del aprobador, bloquea créditos incobrables o cancelados, y registra pago, aplicaciones y aprobación dentro de una transacción.
+
+### Restricción de conciliación histórica
+
+Los pagos canónicos previos a E3 no tienen aplicaciones por concepto ni cuota asociada. No se asignan automáticamente. Si un crédito conserva pagos `CANONICO` sin conciliar, el sistema informa esa condición y bloquea el registro de un nuevo pago exacto para evitar cobrar una obligación incorrecta. Esos créditos requieren conciliación respaldada por comprobantes/contratos antes de habilitar cobros automáticos.
+
+### Alcance contractual
+
+El calendario sigue siendo `PROYECTADO`, calculado con el manual de producto (cuotas mensuales en el día del desembolso, ajustado al último día del mes cuando corresponda). No debe presentarse como fecha contractual verificada sin contrastarlo con el contrato firmado.
+
+### Aprobación humana
+
+El servidor MCP exige `aprobacion_humana: true`, `aprobador` y `credito_cobrable_confirmado: true`, y conserva evidencia en `aprobaciones_pago`. La interfaz cliente debe presentar el resumen del importe exacto y solicitar confirmación expresa antes de invocar la herramienta; el servidor MCP por sí solo no implementa una pantalla de confirmación.

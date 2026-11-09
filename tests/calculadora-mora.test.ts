@@ -95,4 +95,5 @@ describe("Calculadora de mora", () => {
       )
     ).toThrow();
   });
+
 });
