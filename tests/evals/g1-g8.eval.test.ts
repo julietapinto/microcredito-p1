@@ -124,7 +124,10 @@ describe("Evals gerenciales G-1 a G-8", () => {
 
         const herramienta =
           respuesta.tools.find(
-            (actual) =>
+            (actual: {
+                name: string;
+                annotations?: unknown;
+                }) =>
               actual.name ===
               escenario.herramienta
           );

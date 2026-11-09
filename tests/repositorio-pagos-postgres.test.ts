@@ -6,7 +6,20 @@ import {
   RepositorioPagosPostgres
 } from "../src/persistencia/repositorios/repositorio-pagos-postgres.js";
 
-describe("RepositorioPagosPostgres", () => {
+const databaseUrlPagos =
+  process.env.DATABASE_URL;
+
+const describeConPostgresPagos =
+  databaseUrlPagos?.includes(
+    "/credito_vecino_test"
+  )
+    ? describe
+    : describe.skip;
+
+describeConPostgresPagos(
+  "RepositorioPagosPostgres",
+  () => {
+
   let pool: Pool;
   let repositorio: RepositorioPagosPostgres;
 
@@ -15,16 +28,14 @@ describe("RepositorioPagosPostgres", () => {
   const fecha = "2026-11-01";
   const canal = "efectivo";
 
-  beforeAll(() => {
-    const connectionString = process.env.DATABASE_URL;
-
-    if (!connectionString?.includes("/credito_vecino_test")) {
-      throw new Error("Las pruebas requieren credito_vecino_test.");
-    }
-
-    pool = new Pool({ connectionString });
-    repositorio = new RepositorioPagosPostgres(pool);
+beforeAll(() => {
+  pool = new Pool({
+    connectionString: databaseUrlPagos
   });
+
+  repositorio =
+    new RepositorioPagosPostgres(pool);
+});
 
   beforeEach(async () => {
     await pool.query(

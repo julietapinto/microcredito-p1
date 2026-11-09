@@ -13,7 +13,15 @@ import {
   type FragmentoDocumento
 } from "../src/persistencia/repositorios/repositorio-fragmentos-postgres.js";
 
-describe("RepositorioFragmentosPostgres", () => {
+const databaseUrlFragmentos = process.env.DATABASE_URL;
+
+const describeConPostgresFragmentos =
+  databaseUrlFragmentos ? describe : describe.skip;
+
+describeConPostgresFragmentos(
+  "RepositorioFragmentosPostgres",
+  () => {
+    
   let pool: Pool;
   let repositorio: RepositorioFragmentosPostgres;
 
@@ -42,18 +50,14 @@ describe("RepositorioFragmentosPostgres", () => {
     };
   }
 
-  beforeAll(() => {
-    const connectionString = process.env.DATABASE_URL;
-
-    if (!connectionString) {
-      throw new Error(
-        "Debes configurar DATABASE_URL antes de ejecutar estas pruebas."
-      );
-    }
-
-    pool = new Pool({ connectionString });
-    repositorio = new RepositorioFragmentosPostgres(pool);
+beforeAll(() => {
+  pool = new Pool({
+    connectionString: databaseUrlFragmentos
   });
+
+  repositorio =
+    new RepositorioFragmentosPostgres(pool);
+});
 
   beforeEach(async () => {
     await pool.query(

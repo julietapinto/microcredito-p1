@@ -1,0 +1,9 @@
+import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { request, money, input, button, card } from '../api'
+
+export default function Historial() {
+ const [params]=useSearchParams(); const [id,setId]=useState(params.get('id')||''),[datos,setDatos]=useState<any[]|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
+ async function consultar(e:FormEvent){e.preventDefault();setBusy(true);setError('');setDatos(null);try{const d=await request(`/creditos/${encodeURIComponent(id.trim())}/pagos/historial`);if(!Array.isArray(d.data))throw Error('El historial recibido no es válido.');setDatos(d.data)}catch(e){setError(e instanceof Error?e.message:'Error de consulta')}finally{setBusy(false)}}
+ return <details className={`${card} mt-5`}><summary className="cursor-pointer font-semibold">Consultar historial de pagos</summary><form onSubmit={consultar} className="mt-4 flex flex-wrap items-end gap-3"><label>Crédito ID<input className={input} pattern="C-[0-9]{3,8}" value={id} onChange={e=>setId(e.target.value)} placeholder="C-001" required/></label><button className={button} disabled={busy}>Consultar historial</button></form>{error&&<p role="alert" className="mt-3 text-red-700">{error}</p>}{datos && <div className="mt-4 space-y-3">{datos.length===0?<p>No hay pagos en esta página.</p>:datos.map(p=><div key={p.pagoId} className="rounded border border-slate-200 p-3"><p className="font-semibold">{p.pagoId} · {money(p.montoRecibido)}</p><p className="text-sm">Recibido: {p.recibidoEn || 'No disponible'}</p>{p.aplicacion&&<p className="text-sm">Gastos: {p.aplicacion.gastos} · Moratorio: {p.aplicacion.interesMoratorio} · Corriente: {p.aplicacion.interesCorriente} · Capital: {p.aplicacion.capital} · Excedente: {p.aplicacion.excedente}</p>}</div>)}<p className="text-sm text-slate-600">Se muestra la primera página; para consultar pagos anteriores se requiere paginación.</p></div>}</details>
+}
